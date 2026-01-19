@@ -24,6 +24,7 @@ const CSS_PROPERTY_MAP: Record<string, string> = {
   marginLeft: 'margin-left',
   borderRadius: 'border-radius',
   backgroundColor: 'background-color',
+  borderColor: 'border-color',
 };
 
 /**
@@ -92,6 +93,23 @@ export function reapplyStylePatch(patch: StylePatch): boolean {
 }
 
 /**
+ * Extract raw style value from element's style attribute or matched rules.
+ * This preserves var() references that computed styles resolve.
+ */
+function getRawStyleValue(element: Element, property: string): string | undefined {
+  // First check inline style (highest priority)
+  if (element instanceof HTMLElement && element.style) {
+    const inlineValue = element.style.getPropertyValue(toKebabCase(property));
+    if (inlineValue) return inlineValue;
+  }
+  
+  // For a more complete solution, we'd need to walk matched CSS rules
+  // but that's complex and may have performance implications.
+  // For MVP, we only check inline styles for var() preservation.
+  return undefined;
+}
+
+/**
  * Get the computed styles snapshot for an element.
  */
 export function getComputedStylesSnapshot(element: Element): ComputedStylesSnapshot {
@@ -113,6 +131,14 @@ export function getComputedStylesSnapshot(element: Element): ComputedStylesSnaps
     opacity: computedStyle.opacity,
     borderRadius: computedStyle.borderRadius,
     backgroundColor: computedStyle.backgroundColor,
+    color: computedStyle.color,
+    borderColor: computedStyle.borderColor,
+    // Preserve raw values for color properties (to detect var() usage)
+    rawStyles: {
+      backgroundColor: getRawStyleValue(element, 'backgroundColor'),
+      color: getRawStyleValue(element, 'color'),
+      borderColor: getRawStyleValue(element, 'borderColor'),
+    },
   };
 }
 

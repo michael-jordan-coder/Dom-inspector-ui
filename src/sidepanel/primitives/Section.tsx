@@ -13,6 +13,9 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     gap: spacing[2], // Reduced from spacing[3]
+    width: '100%',
+    minWidth: 0,
+    flexShrink: 0, // Prevent vertical squishing
   },
   header: {
     display: 'flex',
@@ -36,6 +39,8 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     gap: spacing[2], // Reduced from spacing[3]
+    width: '100%',
+    minWidth: 0,
   },
 };
 

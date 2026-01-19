@@ -44,6 +44,5 @@ export const cornerRadiusFeature: Feature<number> = {
     min: 0,
     max: 999,
     step: 1,
-    width: 100,
   } as FeatureUINumber,
 };

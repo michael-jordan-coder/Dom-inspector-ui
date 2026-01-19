@@ -45,6 +45,5 @@ export const opacityFeature: Feature<number> = {
     min: 0,
     max: 100,
     step: 1,
-    width: 100,
   } as FeatureUINumber,
 };

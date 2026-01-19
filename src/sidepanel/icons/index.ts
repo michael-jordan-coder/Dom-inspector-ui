@@ -49,3 +49,6 @@ export { OpacityIcon } from './custom/OpacityIcon';
 export { DimensionsIcon } from './custom/DimensionsIcon';
 export { GapIcon } from './custom/GapIcon';
 export { ClipContentIcon } from './custom/ClipContentIcon';
+export { TextColorIcon } from './custom/TextColorIcon';
+export { BackgroundColorIcon } from './custom/BackgroundColorIcon';
+export { BorderColorIcon } from './custom/BorderColorIcon';

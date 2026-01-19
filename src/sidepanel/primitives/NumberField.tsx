@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useRef, useEffect } from 'react';
-import { colors, radii } from '../tokens';
+import { colors, radii, sizes } from '../tokens';
 import { ChevronDown } from '../icons';
 
 interface NumberFieldProps {
@@ -31,7 +31,7 @@ const styles = {
   container: {
     display: 'flex',
     alignItems: 'center',
-    height: 28, // Compact height
+    height: sizes.controlHeight, // Match ColorField visual height
     backgroundColor: colors.surfaceRaised,
     borderRadius: radii.sm,
     overflow: 'hidden',
@@ -40,17 +40,18 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    width: 24,
+    width: sizes.controlIconWidth,
     height: '100%',
     color: colors.textMuted,
     flexShrink: 0,
-    paddingLeft: 6,
+    padding: 6,
   } as React.CSSProperties,
   input: {
     flex: 1,
     height: '100%',
-    padding: '0 6px',
-    fontSize: '12px',
+    padding: '0 8px',
+    fontSize: '13px',
+    lineHeight: sizes.controlHeight,
     fontFamily: 'inherit',
     fontWeight: 500,
     color: colors.text,

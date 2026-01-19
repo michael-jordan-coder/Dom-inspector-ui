@@ -12,3 +12,5 @@ export { IconButton } from './IconButton';
 export { Segmented } from './Segmented';
 export { NumberField } from './NumberField';
 export { Toggle } from './Toggle';
+export { ColorField } from './ColorField';
+export { ColorPopover } from './ColorPopover';

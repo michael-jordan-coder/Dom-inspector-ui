@@ -62,11 +62,24 @@ export interface FeatureUIToggle {
   label: string;
 }
 
+export interface FeatureUIColor {
+  type: 'color';
+  /** Property being controlled (for token extraction context) */
+  property: 'color' | 'backgroundColor' | 'borderColor';
+  /** Show hex input in popover (default: true) */
+  showHexInput?: boolean;
+  /** Show recent colors in popover (default: true) */
+  showRecent?: boolean;
+  /** Show CSS variable tokens (default: true) */
+  showTokens?: boolean;
+}
+
 export type FeatureUI<T = unknown> = 
   | FeatureUINumber
   | FeatureUISlider
   | FeatureUISegmented<T extends string ? T : never>
-  | FeatureUIToggle;
+  | FeatureUIToggle
+  | FeatureUIColor;
 
 // =============================================================================
 // Feature Interface

@@ -51,6 +51,8 @@ export function Row({
         justifyContent: justifyMap[justify],
         gap,
         flexWrap: wrap ? 'wrap' : 'nowrap',
+        width: '100%',
+        minWidth: 0,
         ...style,
       }}
     >

@@ -18,6 +18,8 @@ const styles = {
   container: {
     display: 'flex',
     gap: spacing[1],
+    flexShrink: 0,
+    width: '100%',
   } as React.CSSProperties,
   button: {
     flex: 1,

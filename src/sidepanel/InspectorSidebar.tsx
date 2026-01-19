@@ -5,7 +5,7 @@
  * Compact layout matching Figma's right panel density.
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import type { ComputedStylesSnapshot, ElementMetadata } from '../shared/types';
 import { applyStylePatch } from './messaging/sidepanelBridge';
 import { Divider } from './primitives';
@@ -13,6 +13,7 @@ import { AppearanceSection, LayoutSection, HistorySection } from './sections';
 import { SelectedSummary } from './components/SelectedSummary';
 import { spacing, colors, radii } from './tokens';
 import { Check } from './icons';
+import { getDefaultColorTokens } from './features/color';
 
 interface InspectorSidebarProps {
   element: ElementMetadata;
@@ -28,7 +29,10 @@ const containerStyles: React.CSSProperties = {
   gap: spacing[3], // Reduced from spacing[4]
   padding: spacing[3], // Reduced from spacing[4]
   overflowY: 'auto',
+  overflowX: 'hidden',
   flex: 1,
+  width: '100%',
+  minWidth: 0, // Crucial for flex children to shrink properly
 };
 
 const doneButtonStyles: React.CSSProperties = {
@@ -46,7 +50,7 @@ const doneButtonStyles: React.CSSProperties = {
   borderRadius: radii.full,
   cursor: 'pointer',
   transition: 'all 0.12s ease',
-  marginTop: 'auto',
+  flexShrink: 0, // Prevent button from squishing
 };
 
 export function InspectorSidebar({
@@ -59,14 +63,18 @@ export function InspectorSidebar({
   const handlePatchApply = useCallback(
     async (property: string, value: string) => {
       try {
-        const previousValue = styles[property as keyof ComputedStylesSnapshot] || '';
-        await applyStylePatch(element.selector, property, value, previousValue);
+        const previousValue = styles[property as keyof ComputedStylesSnapshot];
+        const prevString = typeof previousValue === 'string' ? previousValue : '';
+        await applyStylePatch(element.selector, property, value, prevString);
       } catch (e) {
         console.error('Failed to apply patch:', e);
       }
     },
     [element.selector, styles]
   );
+
+  // Get default color tokens for the color picker
+  const colorTokens = useMemo(() => getDefaultColorTokens(), []);
 
   return (
     <div style={containerStyles}>
@@ -77,6 +85,7 @@ export function InspectorSidebar({
       <AppearanceSection
         styles={styles}
         onPatchApply={handlePatchApply}
+        colorTokens={colorTokens}
       />
 
       <Divider margin={spacing[1]} />

@@ -18,6 +18,8 @@ export function Divider({ margin = spacing[4] }: DividerProps): React.ReactEleme
         backgroundColor: colors.border,
         marginTop: margin,
         marginBottom: margin,
+        flexShrink: 0,
+        width: '100%',
       }}
     />
   );

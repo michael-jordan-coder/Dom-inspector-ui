@@ -22,12 +22,17 @@ const styles: Record<string, React.CSSProperties> = {
     height: '100%',
     backgroundColor: colors.bg,
     color: colors.text,
+    overflowX: 'hidden',
+    width: '100%',
+    maxWidth: '100%',
   },
   content: {
     flex: 1,
     overflowY: 'auto',
+    overflowX: 'hidden',
     display: 'flex',
     flexDirection: 'column',
+    width: '100%',
   },
   emptyState: {
     display: 'flex',

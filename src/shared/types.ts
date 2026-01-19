@@ -43,6 +43,14 @@ export interface ComputedStylesSnapshot {
   opacity: string;
   borderRadius: string;
   backgroundColor: string;
+  color: string;
+  borderColor: string;
+  /** Raw style value (preserves var() references) */
+  rawStyles?: {
+    backgroundColor?: string;
+    color?: string;
+    borderColor?: string;
+  };
 }
 
 // ============================================================================

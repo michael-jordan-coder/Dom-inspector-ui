@@ -61,6 +61,10 @@
       --radius-md: 0.5rem;
       --radius-lg: 0.75rem;
       --radius-full: 9999rem;
+
+      /* Component sizing */
+      --control-height: 2.5rem; /* 40px */
+      --control-icon-width: 1.5rem; /* 24px */
     }
 
     html,
@@ -73,12 +77,19 @@
       color: var(--text);
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden;
     }
 
     #root {
       height: 100%;
       display: flex;
       flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Prevent any horizontal overflow globally */
+    * {
+      max-width: 100%;
     }
 
     /* Hide scrollbar but allow scrolling */

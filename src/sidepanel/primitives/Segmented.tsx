@@ -36,8 +36,8 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    width: 28,
-    height: 24,
+    width: 32,
+    height: 36, // 36px + 2px padding each side = 40px total
     padding: 0,
     border: 'none',
     borderRadius: 4,

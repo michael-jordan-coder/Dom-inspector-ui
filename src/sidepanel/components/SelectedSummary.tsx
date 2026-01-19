@@ -13,6 +13,9 @@ const styles: Record<string, React.CSSProperties> = {
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
+    width: '100%',
+    minWidth: 0,
+    flexShrink: 0, // Prevent vertical squishing
   },
   screenshotContainer: {
     position: 'relative',
@@ -45,6 +48,9 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     gap: 'var(--space-2)',
+    width: '100%',
+    minWidth: 0,
+    overflow: 'hidden',
   },
   header: {
     display: 'flex',
@@ -61,6 +67,8 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'flex-start',
     gap: 'var(--space-2)',
+    width: '100%',
+    minWidth: 0,
   },
   selectorValue: {
     flex: 1,
@@ -73,7 +81,9 @@ const styles: Record<string, React.CSSProperties> = {
     wordBreak: 'break-all',
     lineHeight: 1.4,
     maxHeight: 60,
-    overflow: 'auto',
+    overflowY: 'auto',
+    overflowX: 'hidden',
+    minWidth: 0,
   },
   copyButton: {
     flexShrink: 0,

@@ -28,7 +28,11 @@ export function LayoutSection({
   styles,
   onPatchApply,
 }: LayoutSectionProps): React.ReactElement {
-  const isFlexOrGrid = justifyContentFeature.isApplicable(styles);
+  const isFlexOrGrid =
+    styles.display === 'flex' ||
+    styles.display === 'inline-flex' ||
+    styles.display === 'grid' ||
+    styles.display === 'inline-grid';
   const justifyValue = justifyContentFeature.getState(styles);
   const alignValue = alignItemsFeature.getState(styles);
   const flowValue = flowFeature.getState(styles);
