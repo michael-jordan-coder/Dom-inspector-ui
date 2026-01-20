@@ -2,17 +2,23 @@
  * Dimensions Feature
  * 
  * Controls width and height of the selected element.
- * Always applicable but shows computed values (read-only for now).
- * 
- * TODO: Full implementation would allow setting width/height.
- * Currently a stub showing the architecture.
+ * Parses computed width/height to display and edit.
  */
 
+import React from 'react';
 import type { Feature, FeatureUINumber } from '../types';
 import type { ComputedStylesSnapshot } from '../../../shared/types';
 
-// Note: We need to extend ComputedStylesSnapshot to include 'width' and 'height'
-// For now, these are stubs
+/**
+ * Parse a CSS dimension value to a number.
+ * Handles 'auto', '%', and pixel values.
+ */
+function parseDimension(value: string): number {
+  if (!value || value === 'auto' || value === 'none') {
+    return 0;
+  }
+  return parseFloat(value) || 0;
+}
 
 // =============================================================================
 // Width
@@ -24,10 +30,8 @@ export const widthFeature: Feature<number> = {
 
   isApplicable: () => true,
 
-  // TODO: Need 'width' in ComputedStylesSnapshot
-  getState: (_styles: ComputedStylesSnapshot): number => {
-    // Stub: would parse computed width
-    return 0;
+  getState: (styles: ComputedStylesSnapshot): number => {
+    return parseDimension(styles.width);
   },
 
   createPatch: (value: number) => ({
@@ -37,11 +41,13 @@ export const widthFeature: Feature<number> = {
 
   ui: {
     type: 'number',
+    icon: React.createElement('span', {
+      style: { fontSize: 10, fontWeight: 600, color: 'var(--text-muted)' }
+    }, 'W'),
     min: 0,
     max: 9999,
     step: 1,
     width: 80,
-    showDropdown: true,
   } as FeatureUINumber,
 };
 
@@ -55,10 +61,8 @@ export const heightFeature: Feature<number> = {
 
   isApplicable: () => true,
 
-  // TODO: Need 'height' in ComputedStylesSnapshot
-  getState: (_styles: ComputedStylesSnapshot): number => {
-    // Stub: would parse computed height
-    return 0;
+  getState: (styles: ComputedStylesSnapshot): number => {
+    return parseDimension(styles.height);
   },
 
   createPatch: (value: number) => ({
@@ -68,10 +72,13 @@ export const heightFeature: Feature<number> = {
 
   ui: {
     type: 'number',
+    icon: React.createElement('span', {
+      style: { fontSize: 10, fontWeight: 600, color: 'var(--text-muted)' }
+    }, 'H'),
     min: 0,
     max: 9999,
     step: 1,
     width: 80,
-    showDropdown: true,
   } as FeatureUINumber,
 };
+

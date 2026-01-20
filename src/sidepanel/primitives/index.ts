@@ -14,3 +14,4 @@ export { NumberField } from './NumberField';
 export { Toggle } from './Toggle';
 export { ColorField } from './ColorField';
 export { ColorPopover } from './ColorPopover';
+export { AlignmentGrid } from './AlignmentGrid';

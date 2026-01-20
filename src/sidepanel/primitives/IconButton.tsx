@@ -1,5 +1,5 @@
-import React, { useCallback } from 'react';
-import { colors, radii } from '../tokens';
+import React, { useCallback, useState } from 'react';
+import { colors, radii, transitions, sizes } from '../tokens';
 
 interface IconButtonProps {
   /** The icon component to render */
@@ -22,7 +22,7 @@ interface IconButtonProps {
  * 
  * - 32x32 for md (default), 28x28 for sm
  * - Subtle hover/active states
- * - Rounded corners
+ * - Rounded corners with focus ring
  */
 export function IconButton({
   icon,
@@ -32,13 +32,19 @@ export function IconButton({
   title,
   size = 'md',
 }: IconButtonProps): React.ReactElement {
+  const [isHovered, setIsHovered] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+
   const handleClick = useCallback(() => {
     if (!disabled && onClick) {
       onClick();
     }
   }, [disabled, onClick]);
 
-  const buttonSize = size === 'sm' ? 28 : 32;
+  const buttonSize = size === 'sm' ? sizes.iconLg + 8 : sizes.iconLg + 12; // 28 : 32
+
+  const showHoverState = isHovered && !disabled && !active;
+  const showFocusRing = isFocused && !disabled;
 
   const baseStyle: React.CSSProperties = {
     display: 'flex',
@@ -49,11 +55,13 @@ export function IconButton({
     padding: 0,
     border: 'none',
     borderRadius: radii.md,
-    backgroundColor: active ? colors.surfaceRaised : 'transparent',
-    color: active ? colors.text : colors.textMuted,
+    backgroundColor: active || showHoverState ? colors.surfaceRaised : 'transparent',
+    color: active || showHoverState ? colors.text : colors.textMuted,
     cursor: disabled ? 'not-allowed' : 'pointer',
     opacity: disabled ? 0.4 : 1,
-    transition: 'all 0.12s ease',
+    transition: `all ${transitions.fast}`,
+    outline: 'none',
+    boxShadow: showFocusRing ? '0 0 0 var(--ring-width) var(--ring-color)' : 'none',
   };
 
   return (
@@ -63,18 +71,10 @@ export function IconButton({
       onClick={handleClick}
       disabled={disabled}
       title={title}
-      onMouseEnter={(e) => {
-        if (!disabled && !active) {
-          e.currentTarget.style.backgroundColor = colors.surfaceRaised;
-          e.currentTarget.style.color = colors.text;
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!disabled && !active) {
-          e.currentTarget.style.backgroundColor = 'transparent';
-          e.currentTarget.style.color = colors.textMuted;
-        }
-      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onFocus={() => setIsFocused(true)}
+      onBlur={() => setIsFocused(false)}
     >
       {icon}
     </button>

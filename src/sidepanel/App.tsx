@@ -6,6 +6,8 @@ import {
   stopPicker,
   getCurrentState,
   clearSelection,
+  undo,
+  redo,
 } from './messaging/sidepanelBridge';
 import { InspectorHeader } from './components/InspectorHeader';
 import { InspectorSidebar } from './InspectorSidebar';
@@ -63,12 +65,57 @@ const styles: Record<string, React.CSSProperties> = {
     color: colors.text,
     zIndex: 100,
     animation: 'fadeIn 0.2s ease-out',
+    boxShadow: 'var(--shadow-md)',
   },
   errorToast: {
     borderColor: colors.error,
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
   },
 };
+
+// ============================================================================
+// CSS Generation Utility
+// ============================================================================
+
+function toKebabCase(str: string): string {
+  return str.replace(/([A-Z])/g, '-$1').toLowerCase();
+}
+
+function generateCSSFromStyles(selector: string, styles: ComputedStylesSnapshot): string {
+  const properties: string[] = [];
+  const add = (prop: string, value: string | undefined) => {
+    if (value && value !== 'auto' && value !== 'none' && value !== 'normal') {
+      properties.push(`  ${toKebabCase(prop)}: ${value};`);
+    }
+  };
+
+  add('display', styles.display);
+  if (styles.display?.includes('flex') || styles.display?.includes('grid')) {
+    add('justify-content', styles.justifyContent);
+    add('align-items', styles.alignItems);
+    add('gap', styles.gap);
+  }
+  add('width', styles.width);
+  add('height', styles.height);
+  add('padding-top', styles.paddingTop);
+  add('padding-right', styles.paddingRight);
+  add('padding-bottom', styles.paddingBottom);
+  add('padding-left', styles.paddingLeft);
+  add('margin-top', styles.marginTop);
+  add('margin-right', styles.marginRight);
+  add('margin-bottom', styles.marginBottom);
+  add('margin-left', styles.marginLeft);
+  if (styles.opacity !== '1') add('opacity', styles.opacity);
+  add('border-radius', styles.borderRadius);
+  add('background-color', styles.backgroundColor);
+  add('color', styles.color);
+  add('font-size', styles.fontSize);
+  add('font-weight', styles.fontWeight);
+  if (styles.lineHeight !== 'normal') add('line-height', styles.lineHeight);
+
+  if (properties.length === 0) return `/* No styles */`;
+  return `${selector} {\n${properties.join('\n')}\n}`;
+}
 
 // ============================================================================
 // App Component
@@ -156,6 +203,51 @@ export function App(): React.ReactElement {
     }
   }, []);
 
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const modKey = isMac ? e.metaKey : e.ctrlKey;
+
+      if (modKey && e.key === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          // Ctrl/Cmd + Shift + Z = Redo
+          if (canRedo) {
+            try {
+              await redo();
+            } catch (err) {
+              console.error('Redo failed:', err);
+            }
+          }
+        } else {
+          // Ctrl/Cmd + Z = Undo
+          if (canUndo) {
+            try {
+              await undo();
+            } catch (err) {
+              console.error('Undo failed:', err);
+            }
+          }
+        }
+      }
+      // Also support Ctrl/Cmd + Y for redo (Windows convention)
+      if (modKey && e.key === 'y') {
+        e.preventDefault();
+        if (canRedo) {
+          try {
+            await redo();
+          } catch (err) {
+            console.error('Redo failed:', err);
+          }
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [canUndo, canRedo]);
+
   // Handle picker toggle
   const handlePickerToggle = useCallback(async () => {
     try {
@@ -190,6 +282,20 @@ export function App(): React.ReactElement {
       <InspectorHeader
         isPickerActive={isPickerActive}
         onPickerToggle={handlePickerToggle}
+        hasSelection={!!selectedElement}
+        hasChanges={canUndo}
+        onCopyCSS={async () => {
+          if (selectedElement && computedStyles) {
+            const css = generateCSSFromStyles(selectedElement.selector, computedStyles);
+            try {
+              await navigator.clipboard.writeText(css);
+              showToast('CSS copied!');
+            } catch {
+              showToast('Failed to copy', true);
+            }
+          }
+        }}
+        onReset={handleDone}
       />
 
       <div style={styles.content}>
@@ -199,7 +305,6 @@ export function App(): React.ReactElement {
             styles={computedStyles}
             canUndo={canUndo}
             canRedo={canRedo}
-            onDone={handleDone}
           />
         ) : (
           <div style={styles.emptyState}>

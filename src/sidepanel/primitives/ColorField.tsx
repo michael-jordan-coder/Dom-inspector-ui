@@ -32,7 +32,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     height: sizes.controlHeight, // Consistent field height
-    backgroundColor: colors.surfaceRaised,
+    backgroundColor: 'var(--surface-color-field)', // Darker for color fields
     borderRadius: radii.sm,
     overflow: 'hidden',
     cursor: 'pointer',
@@ -109,26 +109,26 @@ export function ColorField({
 }: ColorFieldProps): React.ReactElement {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  
+
   const parsed = parseColor(value, rawValue);
   const hex = colorToHex(value);
-  
+
   const handleClick = useCallback(() => {
     if (!disabled) {
       setIsOpen(true);
     }
   }, [disabled]);
-  
+
   const handleSelect = useCallback((newValue: string) => {
     onChange(newValue);
   }, [onChange]);
-  
+
   const handleClose = useCallback(() => {
     setIsOpen(false);
   }, []);
-  
+
   const anchorRect = containerRef.current?.getBoundingClientRect() ?? new DOMRect();
-  
+
   return (
     <>
       <div
@@ -158,15 +158,15 @@ export function ColorField({
         }}
       >
         {icon && <div style={styles.icon}>{icon}</div>}
-        
+
         {/* Color swatch with transparency support */}
         <div style={styles.swatch}>
           <div style={styles.swatchBg} />
           <div style={{ ...styles.swatchColor, backgroundColor: hex }} />
         </div>
-        
+
         {/* Value display */}
-        <span 
+        <span
           style={{
             ...styles.value,
             ...(parsed.isToken ? styles.tokenValue : {}),
@@ -175,7 +175,7 @@ export function ColorField({
           {parsed.display}
         </span>
       </div>
-      
+
       {/* Popover */}
       {isOpen && containerRef.current && (
         <ColorPopover

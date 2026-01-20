@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { colors, spacing } from '../tokens';
+import { colors, spacing, transitions, typography } from '../tokens';
 import { Check } from '../icons';
 
 interface ToggleProps {
@@ -31,7 +31,7 @@ const styles = {
     border: `1.5px solid ${colors.border}`,
     backgroundColor: 'transparent',
     color: 'transparent',
-    transition: 'all 0.1s ease',
+    transition: `all ${transitions.fast}`,
     flexShrink: 0,
   } as React.CSSProperties,
   checkboxChecked: {
@@ -40,9 +40,12 @@ const styles = {
     color: colors.text,
   } as React.CSSProperties,
   label: {
-    fontSize: '12px',
+    fontSize: typography.xs,
     color: colors.text,
     lineHeight: 1,
+  } as React.CSSProperties,
+  focused: {
+    boxShadow: '0 0 0 var(--ring-width) var(--ring-color)',
   } as React.CSSProperties,
   disabled: {
     opacity: 0.35,

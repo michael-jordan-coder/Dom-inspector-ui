@@ -28,10 +28,19 @@ export interface ElementMetadata {
 }
 
 export interface ComputedStylesSnapshot {
+  // Layout
   display: string;
   justifyContent: string;
   alignItems: string;
   gap: string;
+  // Dimensions
+  width: string;
+  height: string;
+  minWidth: string;
+  maxWidth: string;
+  minHeight: string;
+  maxHeight: string;
+  // Spacing
   paddingTop: string;
   paddingRight: string;
   paddingBottom: string;
@@ -40,11 +49,17 @@ export interface ComputedStylesSnapshot {
   marginRight: string;
   marginBottom: string;
   marginLeft: string;
+  // Appearance
   opacity: string;
   borderRadius: string;
   backgroundColor: string;
   color: string;
   borderColor: string;
+  // Typography
+  fontSize: string;
+  fontWeight: string;
+  lineHeight: string;
+  fontFamily: string;
   /** Raw style value (preserves var() references) */
   rawStyles?: {
     backgroundColor?: string;
@@ -77,26 +92,26 @@ export enum MessageType {
   START_PICK = 'START_PICK',
   STOP_PICK = 'STOP_PICK',
   PICK_CANCELLED = 'PICK_CANCELLED',
-  
+
   // Element selection
   ELEMENT_SELECTED = 'ELEMENT_SELECTED',
   ELEMENT_HOVERED = 'ELEMENT_HOVERED',
   CLEAR_SELECTION = 'CLEAR_SELECTION',
-  
+
   // Style manipulation
   APPLY_STYLE_PATCH = 'APPLY_STYLE_PATCH',
   STYLE_PATCH_APPLIED = 'STYLE_PATCH_APPLIED',
-  
+
   // History
   UNDO = 'UNDO',
   REDO = 'REDO',
   UNDO_APPLIED = 'UNDO_APPLIED',
   REDO_APPLIED = 'REDO_APPLIED',
-  
+
   // State sync
   GET_CURRENT_STATE = 'GET_CURRENT_STATE',
   CURRENT_STATE = 'CURRENT_STATE',
-  
+
   // Connection
   PING = 'PING',
   PONG = 'PONG',
@@ -234,7 +249,7 @@ export function createMessage<T extends ExtensionMessage>(
     version: MESSAGE_VERSION,
     timestamp: Date.now(),
   };
-  
+
   if (payload !== undefined) {
     return { ...base, type, payload } as T;
   }

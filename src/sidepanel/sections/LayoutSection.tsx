@@ -1,12 +1,12 @@
 /**
  * Layout Section
  * 
- * Figma-style responsive layout controls.
+ * Figma-style layout controls matching the reference design.
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import type { ComputedStylesSnapshot } from '../../shared/types';
-import { Section, Row, Segmented, NumberField, Toggle } from '../primitives';
+import { Section, Row, Segmented, NumberField, Toggle, AlignmentGrid } from '../primitives';
 import {
   justifyContentFeature,
   alignItemsFeature,
@@ -14,53 +14,82 @@ import {
   gapFeature,
   paddingHFeature,
   paddingVFeature,
+  marginHFeature,
+  marginVFeature,
   clipContentFeature,
 } from '../features/layout';
+import { widthFeature, heightFeature } from '../features/size';
 import type { FeatureUISegmented, FeatureUINumber } from '../features/types';
-import { colors } from '../tokens';
+import { colors, spacing } from '../tokens';
 
 interface LayoutSectionProps {
   styles: ComputedStylesSnapshot;
   onPatchApply: (property: string, value: string) => void;
 }
 
+// Label style for subsections
+const labelStyle: React.CSSProperties = {
+  fontSize: 11,
+  color: colors.textMuted,
+  marginBottom: 4,
+};
+
 export function LayoutSection({
   styles,
   onPatchApply,
 }: LayoutSectionProps): React.ReactElement {
+  const [borderBox, setBorderBox] = useState(true);
+
   const isFlexOrGrid =
     styles.display === 'flex' ||
     styles.display === 'inline-flex' ||
     styles.display === 'grid' ||
     styles.display === 'inline-grid';
+
+  // Get all values
   const justifyValue = justifyContentFeature.getState(styles);
   const alignValue = alignItemsFeature.getState(styles);
   const flowValue = flowFeature.getState(styles);
   const gapValue = gapFeature.getState(styles);
+  const widthValue = widthFeature.getState(styles);
+  const heightValue = heightFeature.getState(styles);
   const paddingHValue = paddingHFeature.getState(styles);
   const paddingVValue = paddingVFeature.getState(styles);
+  const marginHValue = marginHFeature.getState(styles);
+  const marginVValue = marginVFeature.getState(styles);
   const clipValue = clipContentFeature.getState(styles);
 
-  const handleJustifyChange = useCallback(
-    (value: string) => {
-      const patch = justifyContentFeature.createPatch(value as ReturnType<typeof justifyContentFeature.getState>);
-      onPatchApply(patch.property, patch.value);
-    },
-    [onPatchApply]
-  );
-
-  const handleAlignChange = useCallback(
-    (value: string) => {
-      const patch = alignItemsFeature.createPatch(value as ReturnType<typeof alignItemsFeature.getState>);
-      onPatchApply(patch.property, patch.value);
-    },
-    [onPatchApply]
-  );
-
+  // Handlers
   const handleFlowChange = useCallback(
     (value: string) => {
       const patch = flowFeature.createPatch(value as ReturnType<typeof flowFeature.getState>);
       onPatchApply(patch.property, patch.value);
+    },
+    [onPatchApply]
+  );
+
+  const handleWidthChange = useCallback(
+    (value: number) => {
+      const patch = widthFeature.createPatch(value);
+      onPatchApply(patch.property, patch.value);
+    },
+    [onPatchApply]
+  );
+
+  const handleHeightChange = useCallback(
+    (value: number) => {
+      const patch = heightFeature.createPatch(value);
+      onPatchApply(patch.property, patch.value);
+    },
+    [onPatchApply]
+  );
+
+  const handleAlignmentChange = useCallback(
+    (align: string, justify: string) => {
+      const alignPatch = alignItemsFeature.createPatch(align as ReturnType<typeof alignItemsFeature.getState>);
+      const justifyPatch = justifyContentFeature.createPatch(justify as ReturnType<typeof justifyContentFeature.getState>);
+      onPatchApply(alignPatch.property, alignPatch.value);
+      onPatchApply(justifyPatch.property, justifyPatch.value);
     },
     [onPatchApply]
   );
@@ -89,6 +118,22 @@ export function LayoutSection({
     [onPatchApply]
   );
 
+  const handleMarginHChange = useCallback(
+    (value: number) => {
+      onPatchApply('marginLeft', `${value}px`);
+      onPatchApply('marginRight', `${value}px`);
+    },
+    [onPatchApply]
+  );
+
+  const handleMarginVChange = useCallback(
+    (value: number) => {
+      onPatchApply('marginTop', `${value}px`);
+      onPatchApply('marginBottom', `${value}px`);
+    },
+    [onPatchApply]
+  );
+
   const handleClipChange = useCallback(
     (value: boolean) => {
       const patch = clipContentFeature.createPatch(value);
@@ -97,40 +142,25 @@ export function LayoutSection({
     [onPatchApply]
   );
 
-  const justifyUI = justifyContentFeature.ui as FeatureUISegmented<string>;
-  const alignUI = alignItemsFeature.ui as FeatureUISegmented<string>;
+  const handleBorderBoxChange = useCallback(
+    (value: boolean) => {
+      setBorderBox(value);
+      onPatchApply('boxSizing', value ? 'border-box' : 'content-box');
+    },
+    [onPatchApply]
+  );
+
   const flowUI = flowFeature.ui as FeatureUISegmented<string>;
   const gapUI = gapFeature.ui as FeatureUINumber;
   const paddingHUI = paddingHFeature.ui as FeatureUINumber;
   const paddingVUI = paddingVFeature.ui as FeatureUINumber;
 
   return (
-    <>
-      {/* Alignment - two segmented groups stretching */}
-      {isFlexOrGrid && (
-        <Section title="Alignment">
-          <Row gap="var(--space-2)">
-            <Segmented
-              options={alignUI.options}
-              value={alignValue}
-              onChange={handleAlignChange}
-              disabled={!isFlexOrGrid}
-              stretch
-            />
-            <Segmented
-              options={justifyUI.options}
-              value={justifyValue}
-              onChange={handleJustifyChange}
-              disabled={!isFlexOrGrid}
-              stretch
-            />
-          </Row>
-        </Section>
-      )}
-
+    <Section title="Layout">
       {/* Flow - full width segmented */}
       {isFlexOrGrid && (
-        <Section title="Flow">
+        <div style={{ marginBottom: spacing[3] }}>
+          <span style={labelStyle}>Flow</span>
           <Segmented
             options={flowUI.options}
             value={flowValue}
@@ -138,54 +168,72 @@ export function LayoutSection({
             disabled={!isFlexOrGrid}
             stretch
           />
-        </Section>
+        </div>
       )}
 
-      {/* Dimensions - two columns with labels */}
-      <Section title="Dimensions">
-        <Row gap="var(--space-2)">
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      {/* Dimensions - W/H on single row */}
+      <div style={{ marginBottom: spacing[3] }}>
+        <span style={labelStyle}>Dimensions</span>
+        <Row gap={spacing[2]}>
+          <div style={{ flex: 1 }}>
             <NumberField
-              value={0}
-              onChange={() => {}}
-              icon={<span style={{ fontSize: 10, fontWeight: 600, color: colors.textMuted }}>W</span>}
-              disabled
+              value={widthValue}
+              onChange={handleWidthChange}
+              icon={<span style={{ fontSize: 11, fontWeight: 600, color: colors.textMuted }}>W</span>}
+              unit="px"
+              min={0}
+              max={9999}
             />
           </div>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ flex: 1 }}>
             <NumberField
-              value={0}
-              onChange={() => {}}
-              icon={<span style={{ fontSize: 10, fontWeight: 600, color: colors.textMuted }}>H</span>}
-              disabled
+              value={heightValue}
+              onChange={handleHeightChange}
+              icon={<span style={{ fontSize: 11, fontWeight: 600, color: colors.textMuted }}>H</span>}
+              unit="px"
+              min={0}
+              max={9999}
             />
           </div>
         </Row>
-      </Section>
+      </div>
 
-      {/* Gap - single row when flex/grid */}
+      {/* Alignment Grid + Gap (side by side) */}
       {isFlexOrGrid && (
-        <Section title="Gap">
-          <NumberField
-            value={gapValue}
-            onChange={handleGapChange}
-            icon={gapUI.icon}
-            min={gapUI.min}
-            max={gapUI.max}
-            step={gapUI.step}
-            disabled={!isFlexOrGrid}
-          />
-        </Section>
+        <Row gap={spacing[3]} style={{ marginBottom: spacing[3], alignItems: 'flex-start' }}>
+          <div>
+            <span style={labelStyle}>Alignment</span>
+            <AlignmentGrid
+              alignItems={alignValue}
+              justifyContent={justifyValue}
+              onChange={handleAlignmentChange}
+              disabled={!isFlexOrGrid}
+            />
+          </div>
+          <div style={{ flex: 1 }}>
+            <span style={labelStyle}>Gap</span>
+            <NumberField
+              value={gapValue}
+              onChange={handleGapChange}
+              icon={gapUI.icon}
+              unit="px"
+              min={gapUI.min}
+              max={gapUI.max}
+            />
+          </div>
+        </Row>
       )}
 
       {/* Padding - two columns */}
-      <Section title="Padding">
-        <Row gap="var(--space-2)">
+      <div style={{ marginBottom: spacing[2] }}>
+        <span style={labelStyle}>Padding</span>
+        <Row gap={spacing[2]}>
           <div style={{ flex: 1 }}>
             <NumberField
               value={paddingHValue}
               onChange={handlePaddingHChange}
               icon={paddingHUI.icon}
+              unit="px"
               min={paddingHUI.min}
               max={paddingHUI.max}
             />
@@ -195,19 +243,54 @@ export function LayoutSection({
               value={paddingVValue}
               onChange={handlePaddingVChange}
               icon={paddingVUI.icon}
+              unit="px"
               min={paddingVUI.min}
               max={paddingVUI.max}
             />
           </div>
         </Row>
-      </Section>
+      </div>
 
-      {/* Clip Content */}
+      {/* Clip Content checkbox */}
       <Toggle
-        label={clipContentFeature.label}
+        label="Clip content"
         checked={clipValue}
         onChange={handleClipChange}
       />
-    </>
+
+      {/* Margin - two columns */}
+      <div style={{ marginTop: spacing[3], marginBottom: spacing[2] }}>
+        <span style={labelStyle}>Margin</span>
+        <Row gap={spacing[2]}>
+          <div style={{ flex: 1 }}>
+            <NumberField
+              value={marginHValue}
+              onChange={handleMarginHChange}
+              icon={<span style={{ fontSize: 10, color: colors.textMuted }}>⬌</span>}
+              unit="px"
+              min={-200}
+              max={200}
+            />
+          </div>
+          <div style={{ flex: 1 }}>
+            <NumberField
+              value={marginVValue}
+              onChange={handleMarginVChange}
+              icon={<span style={{ fontSize: 10, color: colors.textMuted }}>⬍</span>}
+              unit="px"
+              min={-200}
+              max={200}
+            />
+          </div>
+        </Row>
+      </div>
+
+      {/* Border box checkbox */}
+      <Toggle
+        label="Border box"
+        checked={borderBox}
+        onChange={handleBorderBoxChange}
+      />
+    </Section>
   );
 }

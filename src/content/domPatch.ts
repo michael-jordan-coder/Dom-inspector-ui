@@ -44,7 +44,7 @@ export function applyStylePatch(
   value: string
 ): { success: boolean; previousValue: string } {
   const element = findElementBySelector(selector);
-  
+
   if (!element || !(element instanceof HTMLElement)) {
     console.warn(`[UI Inspector] Element not found for selector: ${selector}`);
     return { success: false, previousValue: '' };
@@ -65,7 +65,7 @@ export function applyStylePatch(
  */
 export function revertStylePatch(patch: StylePatch): boolean {
   const element = findElementBySelector(patch.selector);
-  
+
   if (!element || !(element instanceof HTMLElement)) {
     console.warn(`[UI Inspector] Element not found for selector: ${patch.selector}`);
     return false;
@@ -102,7 +102,7 @@ function getRawStyleValue(element: Element, property: string): string | undefine
     const inlineValue = element.style.getPropertyValue(toKebabCase(property));
     if (inlineValue) return inlineValue;
   }
-  
+
   // For a more complete solution, we'd need to walk matched CSS rules
   // but that's complex and may have performance implications.
   // For MVP, we only check inline styles for var() preservation.
@@ -114,12 +114,21 @@ function getRawStyleValue(element: Element, property: string): string | undefine
  */
 export function getComputedStylesSnapshot(element: Element): ComputedStylesSnapshot {
   const computedStyle = window.getComputedStyle(element);
-  
+
   return {
+    // Layout
     display: computedStyle.display,
     justifyContent: computedStyle.justifyContent,
     alignItems: computedStyle.alignItems,
     gap: computedStyle.gap,
+    // Dimensions
+    width: computedStyle.width,
+    height: computedStyle.height,
+    minWidth: computedStyle.minWidth,
+    maxWidth: computedStyle.maxWidth,
+    minHeight: computedStyle.minHeight,
+    maxHeight: computedStyle.maxHeight,
+    // Spacing
     paddingTop: computedStyle.paddingTop,
     paddingRight: computedStyle.paddingRight,
     paddingBottom: computedStyle.paddingBottom,
@@ -128,11 +137,17 @@ export function getComputedStylesSnapshot(element: Element): ComputedStylesSnaps
     marginRight: computedStyle.marginRight,
     marginBottom: computedStyle.marginBottom,
     marginLeft: computedStyle.marginLeft,
+    // Appearance
     opacity: computedStyle.opacity,
     borderRadius: computedStyle.borderRadius,
     backgroundColor: computedStyle.backgroundColor,
     color: computedStyle.color,
     borderColor: computedStyle.borderColor,
+    // Typography
+    fontSize: computedStyle.fontSize,
+    fontWeight: computedStyle.fontWeight,
+    lineHeight: computedStyle.lineHeight,
+    fontFamily: computedStyle.fontFamily,
     // Preserve raw values for color properties (to detect var() usage)
     rawStyles: {
       backgroundColor: getRawStyleValue(element, 'backgroundColor'),

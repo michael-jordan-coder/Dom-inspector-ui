@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { colors, radii } from '../tokens';
+import { colors, radii, transitions } from '../tokens';
 
 export interface SegmentedOption<T extends string> {
   value: T;
@@ -44,7 +44,8 @@ const styles = {
     backgroundColor: 'transparent',
     color: colors.textMuted,
     cursor: 'pointer',
-    transition: 'all 0.1s ease',
+    transition: `all ${transitions.fast}`,
+    outline: 'none',
   } as React.CSSProperties,
   buttonActive: {
     backgroundColor: colors.surface,

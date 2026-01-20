@@ -9,10 +9,9 @@ import React, { useCallback, useMemo } from 'react';
 import type { ComputedStylesSnapshot, ElementMetadata } from '../shared/types';
 import { applyStylePatch } from './messaging/sidepanelBridge';
 import { Divider } from './primitives';
-import { AppearanceSection, LayoutSection, HistorySection } from './sections';
+import { AppearanceSection, LayoutSection, TypographySection, HistorySection } from './sections';
 import { SelectedSummary } from './components/SelectedSummary';
-import { spacing, colors, radii } from './tokens';
-import { Check } from './icons';
+import { spacing } from './tokens';
 import { getDefaultColorTokens } from './features/color';
 
 interface InspectorSidebarProps {
@@ -20,7 +19,6 @@ interface InspectorSidebarProps {
   styles: ComputedStylesSnapshot;
   canUndo: boolean;
   canRedo: boolean;
-  onDone: () => void;
 }
 
 const containerStyles: React.CSSProperties = {
@@ -35,30 +33,13 @@ const containerStyles: React.CSSProperties = {
   minWidth: 0, // Crucial for flex children to shrink properly
 };
 
-const doneButtonStyles: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: spacing[1],
-  width: '100%',
-  padding: `10px ${spacing[3]}`,
-  fontSize: '13px',
-  fontWeight: 600,
-  color: colors.bg,
-  backgroundColor: colors.text,
-  border: 'none',
-  borderRadius: radii.full,
-  cursor: 'pointer',
-  transition: 'all 0.12s ease',
-  flexShrink: 0, // Prevent button from squishing
-};
+
 
 export function InspectorSidebar({
   element,
   styles,
   canUndo,
   canRedo,
-  onDone,
 }: InspectorSidebarProps): React.ReactElement {
   const handlePatchApply = useCallback(
     async (property: string, value: string) => {
@@ -90,6 +71,13 @@ export function InspectorSidebar({
 
       <Divider margin={spacing[1]} />
 
+      <TypographySection
+        styles={styles}
+        onPatchApply={handlePatchApply}
+      />
+
+      <Divider margin={spacing[1]} />
+
       <LayoutSection
         styles={styles}
         onPatchApply={handlePatchApply}
@@ -101,15 +89,6 @@ export function InspectorSidebar({
         canUndo={canUndo}
         canRedo={canRedo}
       />
-
-      <button
-        style={doneButtonStyles}
-        onClick={onDone}
-        title="Finish manipulation and clear selection"
-      >
-        <Check size={14} strokeWidth={2.5} />
-        Done
-      </button>
     </div>
   );
 }

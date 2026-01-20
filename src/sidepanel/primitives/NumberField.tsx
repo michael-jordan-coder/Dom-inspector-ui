@@ -1,6 +1,7 @@
 import React, { useCallback, useState, useRef, useEffect } from 'react';
-import { colors, radii, sizes } from '../tokens';
+import { colors, radii, sizes, transitions, typography } from '../tokens';
 import { ChevronDown } from '../icons';
+import { useScrubbable } from '../hooks/useScrubbable';
 
 interface NumberFieldProps {
   /** Current numeric value */
@@ -35,6 +36,10 @@ const styles = {
     backgroundColor: colors.surfaceRaised,
     borderRadius: radii.sm,
     overflow: 'hidden',
+    transition: `box-shadow ${transitions.fast}`,
+  } as React.CSSProperties,
+  containerFocused: {
+    boxShadow: '0 0 0 var(--ring-width) var(--ring-color)',
   } as React.CSSProperties,
   icon: {
     display: 'flex',
@@ -45,12 +50,14 @@ const styles = {
     color: colors.textMuted,
     flexShrink: 0,
     padding: 6,
+    cursor: 'ew-resize',
+    userSelect: 'none',
   } as React.CSSProperties,
   input: {
     flex: 1,
     height: '100%',
     padding: '0 8px',
-    fontSize: '13px',
+    fontSize: typography.sm,
     lineHeight: sizes.controlHeight,
     fontFamily: 'inherit',
     fontWeight: 500,
@@ -62,10 +69,12 @@ const styles = {
     MozAppearance: 'textfield',
   } as React.CSSProperties,
   unit: {
-    fontSize: '11px',
+    fontSize: typography.xs,
     color: colors.textMuted,
     paddingRight: 6,
     flexShrink: 0,
+    cursor: 'ew-resize',
+    userSelect: 'none',
   } as React.CSSProperties,
   dropdown: {
     display: 'flex',
@@ -110,6 +119,16 @@ export function NumberField({
   const [localValue, setLocalValue] = useState(String(value));
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Scrubbing support for drag-to-adjust
+  const scrubHandlers = useScrubbable({
+    value,
+    onChange,
+    min,
+    max,
+    step,
+    decimals: step < 1,
+  });
+
   // Sync local value when external value changes
   useEffect(() => {
     setLocalValue(String(value));
@@ -125,7 +144,7 @@ export function NumberField({
 
   const handleBlur = useCallback(() => {
     let numValue = parseFloat(localValue);
-    
+
     if (isNaN(numValue)) {
       numValue = value; // Revert to previous value
     } else {
@@ -150,10 +169,10 @@ export function NumberField({
         const delta = e.key === 'ArrowUp' ? step : -step;
         const multiplier = e.shiftKey ? 10 : 1;
         let newValue = value + delta * multiplier;
-        
+
         if (min !== undefined && newValue < min) newValue = min;
         if (max !== undefined && newValue > max) newValue = max;
-        
+
         setLocalValue(String(newValue));
         onChange(newValue);
       }
@@ -169,7 +188,15 @@ export function NumberField({
         ...(disabled ? styles.disabled : {}),
       }}
     >
-      {icon && <div style={styles.icon}>{icon}</div>}
+      {icon && (
+        <div
+          style={styles.icon}
+          onPointerDown={disabled ? undefined : scrubHandlers.onPointerDown}
+          title="Drag to adjust"
+        >
+          {icon}
+        </div>
+      )}
       <input
         ref={inputRef}
         type="text"
@@ -182,7 +209,15 @@ export function NumberField({
         disabled={disabled}
         placeholder={placeholder}
       />
-      {unit && <span style={styles.unit}>{unit}</span>}
+      {unit && (
+        <span
+          style={styles.unit}
+          onPointerDown={disabled ? undefined : scrubHandlers.onPointerDown}
+          title="Drag to adjust"
+        >
+          {unit}
+        </span>
+      )}
       {showDropdown && (
         <div style={styles.dropdown}>
           <ChevronDown size={12} />

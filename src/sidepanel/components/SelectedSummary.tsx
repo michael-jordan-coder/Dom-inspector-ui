@@ -15,7 +15,8 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     width: '100%',
     minWidth: 0,
-    flexShrink: 0, // Prevent vertical squishing
+    flexShrink: 0,
+    boxShadow: 'var(--shadow-sm)',
   },
   screenshotContainer: {
     position: 'relative',
@@ -98,7 +99,16 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 'var(--radius-sm)',
     cursor: 'pointer',
     color: 'var(--text-muted)',
-    transition: 'all 0.15s ease',
+    transition: 'all var(--transition-fast)',
+  },
+  copyButtonHover: {
+    backgroundColor: 'var(--surface-raised)',
+    borderColor: 'var(--text-muted)',
+    color: 'var(--text)',
+  },
+  copyButtonFocused: {
+    boxShadow: '0 0 0 var(--ring-width) var(--ring-color)',
+    outline: 'none',
   },
   copyButtonCopied: {
     color: 'var(--success)',
@@ -108,6 +118,8 @@ const styles: Record<string, React.CSSProperties> = {
 
 export function SelectedSummary({ element }: SelectedSummaryProps): React.ReactElement {
   const [copied, setCopied] = useState(false);
+  const [isCopyHovered, setIsCopyHovered] = useState(false);
+  const [isCopyFocused, setIsCopyFocused] = useState(false);
 
   const handleCopy = async () => {
     try {
@@ -163,9 +175,15 @@ export function SelectedSummary({ element }: SelectedSummaryProps): React.ReactE
             style={{
               ...styles.copyButton,
               ...(copied ? styles.copyButtonCopied : {}),
+              ...(isCopyHovered && !copied ? styles.copyButtonHover : {}),
+              ...(isCopyFocused ? styles.copyButtonFocused : {}),
             }}
             onClick={handleCopy}
             title="Copy selector"
+            onMouseEnter={() => setIsCopyHovered(true)}
+            onMouseLeave={() => setIsCopyHovered(false)}
+            onFocus={() => setIsCopyFocused(true)}
+            onBlur={() => setIsCopyFocused(false)}
           >
             {copied ? (
               <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>

@@ -64,7 +64,7 @@ const state: ContentScriptState = {
 function extractElementMetadata(element: Element): ElementMetadata {
   const rect = element.getBoundingClientRect();
   const computedStyles = getComputedStylesSnapshot(element);
-  
+
   // Get text preview from aria-label or textContent
   let textPreview = '';
   const ariaLabel = element.getAttribute('aria-label');
@@ -104,7 +104,7 @@ function handleMouseMove(e: MouseEvent): void {
   if (!state.isPickerActive) return;
 
   const target = e.target as Element;
-  
+
   // Skip our own overlay elements
   if (target.id?.startsWith('__ui_inspector')) return;
 
@@ -119,7 +119,7 @@ function handleClick(e: MouseEvent): void {
   if (!state.isPickerActive) return;
 
   const target = e.target as Element;
-  
+
   // Skip our own overlay elements
   if (target.id?.startsWith('__ui_inspector')) return;
 
@@ -128,11 +128,11 @@ function handleClick(e: MouseEvent): void {
   e.stopPropagation();
   e.stopImmediatePropagation();
 
-  // Select the element
+  // Select the element - picker stays active for continued selection
   selectElement(target);
-  
-  // Stop picker mode
-  stopPicker();
+
+  // NOTE: Do NOT call stopPicker() here - live selection mode
+  // User must press Esc or use UI toggle to exit picking mode
 }
 
 function handleKeyDown(e: KeyboardEvent): void {
@@ -147,36 +147,36 @@ function handleKeyDown(e: KeyboardEvent): void {
 
 function startPicker(): void {
   if (state.isPickerActive) return;
-  
+
   state.isPickerActive = true;
   state.hoveredElement = null;
-  
+
   // Initialize overlay
   initOverlay();
-  
+
   // Add event listeners with capture to get events before page
   document.addEventListener('mousemove', handleMouseMove, true);
   document.addEventListener('click', handleClick, true);
   document.addEventListener('keydown', handleKeyDown, true);
-  
+
   // Add cursor style
   document.body.style.cursor = 'crosshair';
 }
 
 function stopPicker(): void {
   if (!state.isPickerActive) return;
-  
+
   state.isPickerActive = false;
   state.hoveredElement = null;
-  
+
   // Remove event listeners
   document.removeEventListener('mousemove', handleMouseMove, true);
   document.removeEventListener('click', handleClick, true);
   document.removeEventListener('keydown', handleKeyDown, true);
-  
+
   // Hide hover overlay
   hideHoverOverlay();
-  
+
   // Restore cursor
   document.body.style.cursor = '';
 }
@@ -184,11 +184,11 @@ function stopPicker(): void {
 function selectElement(element: Element): void {
   state.selectedElement = element;
   state.selectedSelector = getStableSelector(element);
-  
+
   // Show selected overlay
   const rect = element.getBoundingClientRect();
   showSelectedOverlay(rect);
-  
+
   // Extract and send metadata
   const metadata = extractElementMetadata(element);
   sendMessage(createMessage<import('../shared/types').ElementSelectedMessage>(
@@ -208,7 +208,7 @@ function handleApplyStylePatch(
   previousValue: string
 ): { success: boolean; patch: StylePatch; updatedStyles: ComputedStylesSnapshot | null } {
   const result = applyStylePatch(selector, property, value);
-  
+
   const patch: StylePatch = {
     selector,
     property,
@@ -216,11 +216,11 @@ function handleApplyStylePatch(
     previousValue: result.previousValue || previousValue,
     timestamp: Date.now(),
   };
-  
+
   if (result.success) {
     // Add to history
     pushPatch(patch);
-    
+
     // Update selected overlay position (element might have moved)
     const element = findElementBySelector(selector);
     if (element) {
@@ -229,7 +229,7 @@ function handleApplyStylePatch(
       return { success: true, patch, updatedStyles };
     }
   }
-  
+
   return { success: result.success, patch, updatedStyles: null };
 }
 
@@ -241,7 +241,7 @@ function handleUndo(): {
   canRedo: boolean;
 } {
   const patch = popUndo();
-  
+
   if (!patch) {
     return {
       success: false,
@@ -251,18 +251,18 @@ function handleUndo(): {
       canRedo: canRedo(),
     };
   }
-  
+
   const success = revertStylePatch(patch);
-  
+
   // Get updated styles
   const element = findElementBySelector(patch.selector);
   const updatedStyles = element ? getComputedStylesSnapshot(element) : null;
-  
+
   // Update overlay
   if (element) {
     updateSelectedOverlay(element);
   }
-  
+
   return {
     success,
     patch,
@@ -280,7 +280,7 @@ function handleRedo(): {
   canRedo: boolean;
 } {
   const patch = popRedo();
-  
+
   if (!patch) {
     return {
       success: false,
@@ -290,18 +290,18 @@ function handleRedo(): {
       canRedo: canRedo(),
     };
   }
-  
+
   const success = reapplyStylePatch(patch);
-  
+
   // Get updated styles
   const element = findElementBySelector(patch.selector);
   const updatedStyles = element ? getComputedStylesSnapshot(element) : null;
-  
+
   // Update overlay
   if (element) {
     updateSelectedOverlay(element);
   }
-  
+
   return {
     success,
     patch,
@@ -325,7 +325,7 @@ function sendMessage(message: ExtensionMessage): void {
 
 // Listen for messages from background script
 chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendResponse) => {
-  
+
   if (!message || !message.type) {
     return false;
   }
@@ -346,7 +346,7 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendRe
         const { selector, property, value, previousValue } = message.payload;
         const result = handleApplyStylePatch(selector, String(property), value, previousValue);
         sendResponse(result);
-        
+
         // Also send updated state to sidepanel
         sendMessage(createMessage<import('../shared/types').StylePatchAppliedMessage>(
           MessageType.STYLE_PATCH_APPLIED,
@@ -363,7 +363,7 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendRe
       {
         const result = handleUndo();
         sendResponse(result);
-        
+
         sendMessage(createMessage<import('../shared/types').UndoAppliedMessage>(
           MessageType.UNDO_APPLIED,
           result
@@ -375,7 +375,7 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendRe
       {
         const result = handleRedo();
         sendResponse(result);
-        
+
         sendMessage(createMessage<import('../shared/types').RedoAppliedMessage>(
           MessageType.REDO_APPLIED,
           result
