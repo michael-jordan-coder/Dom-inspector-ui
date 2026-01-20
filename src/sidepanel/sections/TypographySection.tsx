@@ -6,7 +6,7 @@
 
 import React, { useCallback } from 'react';
 import type { ComputedStylesSnapshot } from '../../shared/types';
-import { Section, Row, NumberField, Segmented } from '../primitives';
+import { Section, Row, NumberField, Dropdown } from '../primitives';
 import { fontSizeFeature, fontWeightFeature, lineHeightFeature } from '../features/typography';
 import type { FeatureUINumber, FeatureUISegmented } from '../features/types';
 import { colors, spacing } from '../tokens';
@@ -58,6 +58,13 @@ export function TypographySection({
     const fontWeightUI = fontWeightFeature.ui as FeatureUISegmented<string>;
     const lineHeightUI = lineHeightFeature.ui as FeatureUINumber;
 
+    // Convert segmented options to dropdown options
+    const weightOptions = fontWeightUI.options.map(opt => ({
+        value: opt.value,
+        label: opt.title || opt.value,
+        icon: opt.icon
+    }));
+
     return (
         <Section title="Text">
             {/* Font Size and Line Height */}
@@ -90,11 +97,12 @@ export function TypographySection({
             {/* Font Weight */}
             <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <span style={labelStyle}>Weight</span>
-                <Segmented
-                    options={fontWeightUI.options}
+
+                <Dropdown
+                    options={weightOptions}
                     value={fontWeightValue}
                     onChange={handleFontWeightChange}
-                    stretch
+                    width="100%"
                 />
             </div>
         </Section>

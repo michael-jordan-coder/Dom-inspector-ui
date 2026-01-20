@@ -46,7 +46,6 @@ export { FlowGridIcon } from './custom/FlowGridIcon';
 export { PaddingHIcon } from './custom/PaddingHIcon';
 export { PaddingVIcon } from './custom/PaddingVIcon';
 export { OpacityIcon } from './custom/OpacityIcon';
-export { DimensionsIcon } from './custom/DimensionsIcon';
 export { GapIcon } from './custom/GapIcon';
 export { ClipContentIcon } from './custom/ClipContentIcon';
 export { TextColorIcon } from './custom/TextColorIcon';

@@ -30,6 +30,7 @@ const containerStyles: React.CSSProperties = {
   overflowX: 'hidden',
   flex: 1,
   width: '100%',
+  
   minWidth: 0, // Crucial for flex children to shrink properly
 };
 

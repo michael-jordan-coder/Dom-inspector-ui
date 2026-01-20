@@ -86,10 +86,10 @@ export const focusRing = {
 // Component Sizes (Figma-style compact controls)
 // =============================================================================
 export const sizes = {
-  iconXs: 12,
-  iconSm: 14,
-  icon: 16,
-  iconLg: 20,
+  iconXs: 14,
+  iconSm: 16,
+  icon: 18,
+  iconLg: 22,
   controlHeight: 'var(--control-height)',
   controlHeightSm: 'var(--control-height-sm)',
   controlIconWidth: 'var(--control-icon-width)',

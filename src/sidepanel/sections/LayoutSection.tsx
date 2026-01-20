@@ -179,7 +179,7 @@ export function LayoutSection({
             <NumberField
               value={widthValue}
               onChange={handleWidthChange}
-              icon={<span style={{ fontSize: 11, fontWeight: 600, color: colors.textMuted }}>W</span>}
+              icon={<span style={{ fontSize: 12, fontWeight: 600, color: colors.textMuted }}>W</span>}
               unit="px"
               min={0}
               max={9999}
@@ -189,7 +189,7 @@ export function LayoutSection({
             <NumberField
               value={heightValue}
               onChange={handleHeightChange}
-              icon={<span style={{ fontSize: 11, fontWeight: 600, color: colors.textMuted }}>H</span>}
+              icon={<span style={{ fontSize: 12, fontWeight: 600, color: colors.textMuted }}>H</span>}
               unit="px"
               min={0}
               max={9999}
@@ -266,7 +266,7 @@ export function LayoutSection({
             <NumberField
               value={marginHValue}
               onChange={handleMarginHChange}
-              icon={<span style={{ fontSize: 10, color: colors.textMuted }}>⬌</span>}
+              icon={<span style={{ fontSize: 16, color: colors.textMuted }}>⬌</span>}
               unit="px"
               min={-200}
               max={200}
@@ -276,7 +276,7 @@ export function LayoutSection({
             <NumberField
               value={marginVValue}
               onChange={handleMarginVChange}
-              icon={<span style={{ fontSize: 10, color: colors.textMuted }}>⬍</span>}
+              icon={<span style={{ fontSize: 16, color: colors.textMuted }}>⬍</span>}
               unit="px"
               min={-200}
               max={200}
