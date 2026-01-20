@@ -157,7 +157,7 @@ export function LayoutSection({
       <div style={{ marginBottom: spacing[3] }}>
         <span style={labelStyle}>Dimensions</span>
         <Row gap={spacing[2]} style={{ alignItems: 'flex-start' }}>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <DimensionControl
               label="W"
               property="width"
@@ -167,7 +167,7 @@ export function LayoutSection({
               onApply={onPatchApply}
             />
           </div>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <DimensionControl
               label="H"
               property="height"
@@ -183,7 +183,7 @@ export function LayoutSection({
       {/* Alignment Grid + Gap (side by side) */}
       {isFlexOrGrid && (
         <Row gap={spacing[3]} style={{ marginBottom: spacing[3], alignItems: 'flex-start' }}>
-          <div>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <span style={labelStyle}>Alignment</span>
             <AlignmentGrid
               alignItems={alignValue}
@@ -209,7 +209,7 @@ export function LayoutSection({
       {/* Padding - two columns */}
       <div style={{ marginBottom: spacing[2] }}>
         <span style={labelStyle}>Padding</span>
-        <Row gap={spacing[2]}>
+        <Row gap={spacing[2]} wrap>
           <div style={{ flex: 1 }}>
             <NumberField
               value={paddingHValue}
@@ -220,7 +220,7 @@ export function LayoutSection({
               max={paddingHUI.max}
             />
           </div>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <NumberField
               value={paddingVValue}
               onChange={handlePaddingVChange}
@@ -243,7 +243,7 @@ export function LayoutSection({
       {/* Margin - two columns */}
       <div style={{ marginTop: spacing[3], marginBottom: spacing[2] }}>
         <span style={labelStyle}>Margin</span>
-        <Row gap={spacing[2]}>
+        <Row gap={spacing[2]} wrap>
           <div style={{ flex: 1 }}>
             <NumberField
               value={marginHValue}
@@ -254,7 +254,7 @@ export function LayoutSection({
               max={200}
             />
           </div>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <NumberField
               value={marginVValue}
               onChange={handleMarginVChange}

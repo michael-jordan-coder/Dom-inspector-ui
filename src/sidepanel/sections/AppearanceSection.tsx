@@ -32,7 +32,7 @@ const labelStyle: React.CSSProperties = {
 
 const twoColumnGridStyle: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
+  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
   gap: spacing[3],
   width: '100%',
   minWidth: 0,
@@ -130,6 +130,7 @@ export function AppearanceSection({
       }
     >
       {/* Row 1: Opacity and Corner radius - two columns grid */}
+      {/* Row 1: Opacity and Corner radius - two columns grid */}
       <div style={twoColumnGridStyle}>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <span style={labelStyle}>Opacity</span>
@@ -159,7 +160,8 @@ export function AppearanceSection({
       </div>
 
       {/* Row 2: Colors - two columns for text and background */}
-      <div style={twoColumnGridStyle}>
+      {/* Row 2: Colors - two columns for text and background */}
+      <div style={{ ...twoColumnGridStyle, marginTop: spacing[3] }}>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <span style={labelStyle}>Text</span>
           <ColorField

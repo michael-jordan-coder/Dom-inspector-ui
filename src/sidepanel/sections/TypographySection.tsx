@@ -69,7 +69,7 @@ export function TypographySection({
         <Section title="Text">
             {/* Font Size and Line Height */}
             <Row gap={spacing[3]}>
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                     <span style={labelStyle}>Size</span>
                     <NumberField
                         value={fontSizeValue}
@@ -81,7 +81,7 @@ export function TypographySection({
                         unit={fontSizeUI.unit}
                     />
                 </div>
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                     <span style={labelStyle}>Line Height</span>
                     <NumberField
                         value={lineHeightValue}
