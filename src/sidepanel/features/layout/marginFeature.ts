@@ -8,6 +8,7 @@
 import React from 'react';
 import type { Feature, FeatureUINumber } from '../types';
 import type { ComputedStylesSnapshot } from '../../../shared/types';
+import { AppIcon } from '../../primitives/AppIcon';
 
 function parseMargin(value: string): number {
     return parseInt(value) || 0;
@@ -36,9 +37,7 @@ export const marginHFeature: Feature<number> = {
 
     ui: {
         type: 'number',
-        icon: React.createElement('span', {
-            style: { fontSize: 9, fontWeight: 600, color: 'var(--text-muted)' }
-        }, 'M↔'),
+        icon: React.createElement(AppIcon, { name: 'marginH', size: 16 }),
         min: -200,
         max: 200,
         step: 1,
@@ -69,9 +68,7 @@ export const marginVFeature: Feature<number> = {
 
     ui: {
         type: 'number',
-        icon: React.createElement('span', {
-            style: { fontSize: 9, fontWeight: 600, color: 'var(--text-muted)' }
-        }, 'M↕'),
+        icon: React.createElement(AppIcon, { name: 'marginV', size: 16 }),
         min: -200,
         max: 200,
         step: 1,

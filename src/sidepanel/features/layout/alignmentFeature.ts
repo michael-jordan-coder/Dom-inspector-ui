@@ -2,20 +2,12 @@
  * Alignment Feature
  * 
  * Controls justify-content and align-items for flex/grid containers.
- * Only applicable when element has display: flex or grid.
  */
 
+import React from 'react';
 import type { Feature, FeatureUISegmented } from '../types';
 import type { ComputedStylesSnapshot } from '../../../shared/types';
-import {
-  AlignLeftTextIcon,
-  AlignCenterTextIcon,
-  AlignRightTextIcon,
-  AlignTopIcon,
-  AlignCenterVIcon,
-  AlignBottomIcon,
-} from '../../icons';
-import React from 'react';
+import { AppIcon } from '../../primitives/AppIcon';
 
 // =============================================================================
 // Horizontal Alignment (justify-content)
@@ -33,7 +25,6 @@ function isFlexOrGrid(styles: ComputedStylesSnapshot): boolean {
 }
 
 function parseJustify(value: string): JustifyValue {
-  // Normalize values
   if (value === 'start' || value === 'flex-start' || value === 'normal') {
     return 'flex-start';
   }
@@ -69,17 +60,17 @@ export const justifyContentFeature: Feature<JustifyValue> = {
     options: [
       {
         value: 'flex-start' as JustifyValue,
-        icon: React.createElement(AlignLeftTextIcon, { size: 16 }),
+        icon: React.createElement(AppIcon, { name: 'alignLeft', size: 16 }),
         title: 'Align start',
       },
       {
         value: 'center' as JustifyValue,
-        icon: React.createElement(AlignCenterTextIcon, { size: 16 }),
+        icon: React.createElement(AppIcon, { name: 'alignCenter', size: 16 }),
         title: 'Align center',
       },
       {
         value: 'flex-end' as JustifyValue,
-        icon: React.createElement(AlignRightTextIcon, { size: 16 }),
+        icon: React.createElement(AppIcon, { name: 'alignRight', size: 16 }),
         title: 'Align end',
       },
     ],
@@ -128,17 +119,17 @@ export const alignItemsFeature: Feature<AlignValue> = {
     options: [
       {
         value: 'flex-start' as AlignValue,
-        icon: React.createElement(AlignTopIcon, { size: 16 }),
+        icon: React.createElement(AppIcon, { name: 'alignTop', size: 16 }),
         title: 'Align top',
       },
       {
         value: 'center' as AlignValue,
-        icon: React.createElement(AlignCenterVIcon, { size: 16 }),
+        icon: React.createElement(AppIcon, { name: 'alignCenter', size: 16 }),
         title: 'Align center',
       },
       {
         value: 'flex-end' as AlignValue,
-        icon: React.createElement(AlignBottomIcon, { size: 16 }),
+        icon: React.createElement(AppIcon, { name: 'alignBottom', size: 16 }),
         title: 'Align bottom',
       },
     ],

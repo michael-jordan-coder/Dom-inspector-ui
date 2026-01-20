@@ -7,19 +7,13 @@
 
 import React, { useCallback, useMemo } from 'react';
 import type { ComputedStylesSnapshot } from '../../shared/types';
-import { Section, NumberField, IconButton, ColorField } from '../primitives';
+import { Section, NumberField, IconButton, ColorField, AppIcon } from '../primitives';
 import { opacityFeature, cornerRadiusFeature } from '../features/appearance';
-import { 
-  textColorFeature, 
-  backgroundColorFeature, 
-  borderColorFeature 
+import {
+  textColorFeature,
+  backgroundColorFeature,
+  borderColorFeature
 } from '../features/color';
-import { 
-  Eye, 
-  TextColorIcon, 
-  BackgroundColorIcon, 
-  BorderColorIcon 
-} from '../icons';
 import type { FeatureUINumber } from '../features/types';
 import { colors, spacing } from '../tokens';
 
@@ -52,7 +46,7 @@ export function AppearanceSection({
   // Existing feature values
   const opacityValue = opacityFeature.getState(styles);
   const radiusValue = cornerRadiusFeature.getState(styles);
-  
+
   // Color feature values
   const textColorValue = textColorFeature.getState(styles);
   const bgColorValue = backgroundColorFeature.getState(styles);
@@ -129,7 +123,7 @@ export function AppearanceSection({
       title="Appearance"
       trailingIcons={
         <IconButton
-          icon={<Eye size={14} />}
+          icon={<AppIcon name="eye" size={14} />}
           title="Toggle visibility"
           size="sm"
         />
@@ -172,7 +166,7 @@ export function AppearanceSection({
             value={textColorValue}
             rawValue={styles.rawStyles?.color}
             onChange={handleTextColorChange}
-            icon={<TextColorIcon size={14} />}
+            icon={<AppIcon name="color" size={14} />}
             tokens={colorRelatedTokens}
             ariaLabel="Text color"
           />
@@ -183,7 +177,7 @@ export function AppearanceSection({
             value={bgColorValue}
             rawValue={styles.rawStyles?.backgroundColor}
             onChange={handleBgColorChange}
-            icon={<BackgroundColorIcon size={14} />}
+            icon={<AppIcon name="opacityFilled" size={14} />}
             tokens={colorRelatedTokens}
             ariaLabel="Background color"
           />
@@ -198,7 +192,7 @@ export function AppearanceSection({
             value={borderColorValue}
             rawValue={styles.rawStyles?.borderColor}
             onChange={handleBorderColorChange}
-            icon={<BorderColorIcon size={14} />}
+            icon={<AppIcon name="checkbox" size={14} />}
             tokens={colorRelatedTokens}
             ariaLabel="Border color"
           />

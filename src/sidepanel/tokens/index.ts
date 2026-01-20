@@ -34,6 +34,7 @@ export const colors = {
   bg: 'var(--bg)',
   surface: 'var(--surface)',
   surfaceRaised: 'var(--surface-raised)',
+  surfaceColorField: 'var(--surface-color-field)',
   border: 'var(--border)',
   text: 'var(--text)',
   textMuted: 'var(--text-muted)',

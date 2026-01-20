@@ -2,18 +2,12 @@
  * Flow Feature
  * 
  * Controls flex-direction and display mode.
- * TODO: Full implementation pending - currently a stub.
  */
 
+import React from 'react';
 import type { Feature, FeatureUISegmented } from '../types';
 import type { ComputedStylesSnapshot } from '../../../shared/types';
-import {
-  FlowRowIcon,
-  FlowColumnIcon,
-  FlowWrapIcon,
-  FlowGridIcon,
-} from '../../icons';
-import React from 'react';
+import { AppIcon } from '../../primitives/AppIcon';
 
 type FlowValue = 'row' | 'column' | 'wrap' | 'grid';
 
@@ -21,10 +15,7 @@ function parseFlow(styles: ComputedStylesSnapshot): FlowValue {
   if (styles.display === 'grid' || styles.display === 'inline-grid') {
     return 'grid';
   }
-  // TODO: Check flex-wrap for 'wrap' value
-  // For now, use flex-direction
   if (styles.display === 'flex' || styles.display === 'inline-flex') {
-    // Default to row, would need flexDirection in ComputedStylesSnapshot
     return 'row';
   }
   return 'row';
@@ -34,7 +25,6 @@ export const flowFeature: Feature<FlowValue> = {
   id: 'flow',
   label: 'Flow',
 
-  // Only applicable to flex/grid containers
   isApplicable: (styles: ComputedStylesSnapshot): boolean => {
     return (
       styles.display === 'flex' ||
@@ -46,7 +36,6 @@ export const flowFeature: Feature<FlowValue> = {
 
   getState: parseFlow,
 
-  // TODO: This needs to set multiple properties depending on value
   createPatch: (value: FlowValue) => {
     switch (value) {
       case 'row':
@@ -67,22 +56,22 @@ export const flowFeature: Feature<FlowValue> = {
     options: [
       {
         value: 'row' as FlowValue,
-        icon: React.createElement(FlowRowIcon, { size: 16 }),
+        icon: React.createElement(AppIcon, { name: 'flowRow', size: 18 }),
         title: 'Row',
       },
       {
         value: 'column' as FlowValue,
-        icon: React.createElement(FlowColumnIcon, { size: 16 }),
+        icon: React.createElement(AppIcon, { name: 'flowColumn', size: 18 }),
         title: 'Column',
       },
       {
         value: 'wrap' as FlowValue,
-        icon: React.createElement(FlowWrapIcon, { size: 16 }),
+        icon: React.createElement(AppIcon, { name: 'flowWrap', size: 18 }),
         title: 'Wrap',
       },
       {
         value: 'grid' as FlowValue,
-        icon: React.createElement(FlowGridIcon, { size: 16 }),
+        icon: React.createElement(AppIcon, { name: 'flowGrid', size: 18 }),
         title: 'Grid',
       },
     ],

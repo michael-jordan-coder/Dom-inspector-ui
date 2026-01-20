@@ -6,7 +6,7 @@
 
 import React, { useCallback, useState } from 'react';
 import type { ComputedStylesSnapshot } from '../../shared/types';
-import { Section, Row, Segmented, NumberField, Toggle, AlignmentGrid } from '../primitives';
+import { Section, Row, Segmented, NumberField, Toggle, AlignmentGrid, AppIcon } from '../primitives';
 import {
   justifyContentFeature,
   alignItemsFeature,
@@ -18,7 +18,7 @@ import {
   marginVFeature,
   clipContentFeature,
 } from '../features/layout';
-import { widthFeature, heightFeature } from '../features/size';
+import { DimensionControl } from '../components/DimensionControl';
 import type { FeatureUISegmented, FeatureUINumber } from '../features/types';
 import { colors, spacing } from '../tokens';
 
@@ -51,8 +51,6 @@ export function LayoutSection({
   const alignValue = alignItemsFeature.getState(styles);
   const flowValue = flowFeature.getState(styles);
   const gapValue = gapFeature.getState(styles);
-  const widthValue = widthFeature.getState(styles);
-  const heightValue = heightFeature.getState(styles);
   const paddingHValue = paddingHFeature.getState(styles);
   const paddingVValue = paddingVFeature.getState(styles);
   const marginHValue = marginHFeature.getState(styles);
@@ -63,22 +61,6 @@ export function LayoutSection({
   const handleFlowChange = useCallback(
     (value: string) => {
       const patch = flowFeature.createPatch(value as ReturnType<typeof flowFeature.getState>);
-      onPatchApply(patch.property, patch.value);
-    },
-    [onPatchApply]
-  );
-
-  const handleWidthChange = useCallback(
-    (value: number) => {
-      const patch = widthFeature.createPatch(value);
-      onPatchApply(patch.property, patch.value);
-    },
-    [onPatchApply]
-  );
-
-  const handleHeightChange = useCallback(
-    (value: number) => {
-      const patch = heightFeature.createPatch(value);
       onPatchApply(patch.property, patch.value);
     },
     [onPatchApply]
@@ -174,25 +156,25 @@ export function LayoutSection({
       {/* Dimensions - W/H on single row */}
       <div style={{ marginBottom: spacing[3] }}>
         <span style={labelStyle}>Dimensions</span>
-        <Row gap={spacing[2]}>
+        <Row gap={spacing[2]} style={{ alignItems: 'flex-start' }}>
           <div style={{ flex: 1 }}>
-            <NumberField
-              value={widthValue}
-              onChange={handleWidthChange}
-              icon={<span style={{ fontSize: 12, fontWeight: 600, color: colors.textMuted }}>W</span>}
-              unit="px"
-              min={0}
-              max={9999}
+            <DimensionControl
+              label="W"
+              property="width"
+              value={styles.width}
+              minValue={styles.minWidth}
+              maxValue={styles.maxWidth}
+              onApply={onPatchApply}
             />
           </div>
           <div style={{ flex: 1 }}>
-            <NumberField
-              value={heightValue}
-              onChange={handleHeightChange}
-              icon={<span style={{ fontSize: 12, fontWeight: 600, color: colors.textMuted }}>H</span>}
-              unit="px"
-              min={0}
-              max={9999}
+            <DimensionControl
+              label="H"
+              property="height"
+              value={styles.height}
+              minValue={styles.minHeight}
+              maxValue={styles.maxHeight}
+              onApply={onPatchApply}
             />
           </div>
         </Row>
@@ -266,7 +248,7 @@ export function LayoutSection({
             <NumberField
               value={marginHValue}
               onChange={handleMarginHChange}
-              icon={<span style={{ fontSize: 16, color: colors.textMuted }}>⬌</span>}
+              icon={<AppIcon name="marginH" size={14} color={colors.textMuted} />}
               unit="px"
               min={-200}
               max={200}
@@ -276,7 +258,7 @@ export function LayoutSection({
             <NumberField
               value={marginVValue}
               onChange={handleMarginVChange}
-              icon={<span style={{ fontSize: 16, color: colors.textMuted }}>⬍</span>}
+              icon={<AppIcon name="marginV" size={14} color={colors.textMuted} />}
               unit="px"
               min={-200}
               max={200}

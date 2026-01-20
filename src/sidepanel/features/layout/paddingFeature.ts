@@ -2,16 +2,12 @@
  * Padding Feature
  * 
  * Controls horizontal and vertical padding.
- * Always applicable to any element.
- * 
- * TODO: Currently simplified to horizontal/vertical pairs.
- * Full implementation would support individual sides.
  */
 
+import React from 'react';
 import type { Feature, FeatureUINumber } from '../types';
 import type { ComputedStylesSnapshot } from '../../../shared/types';
-import { PaddingHIcon, PaddingVIcon } from '../../icons';
-import React from 'react';
+import { AppIcon } from '../../primitives/AppIcon';
 
 function parsePadding(value: string): number {
   return parseInt(value) || 0;
@@ -28,13 +24,11 @@ export const paddingHFeature: Feature<number> = {
   isApplicable: () => true,
 
   getState: (styles: ComputedStylesSnapshot): number => {
-    // Average of left and right, or just left
     const left = parsePadding(styles.paddingLeft);
     const right = parsePadding(styles.paddingRight);
     return left === right ? left : left;
   },
 
-  // TODO: This should set both paddingLeft and paddingRight
   createPatch: (value: number) => ({
     property: 'paddingLeft',
     value: `${value}px`,
@@ -42,7 +36,7 @@ export const paddingHFeature: Feature<number> = {
 
   ui: {
     type: 'number',
-    icon: React.createElement(PaddingHIcon, { size: 14 }),
+    icon: React.createElement(AppIcon, { name: 'paddingH', size: 16 }),
     min: 0,
     max: 200,
     step: 1,
@@ -66,7 +60,6 @@ export const paddingVFeature: Feature<number> = {
     return top === bottom ? top : top;
   },
 
-  // TODO: This should set both paddingTop and paddingBottom
   createPatch: (value: number) => ({
     property: 'paddingTop',
     value: `${value}px`,
@@ -74,7 +67,7 @@ export const paddingVFeature: Feature<number> = {
 
   ui: {
     type: 'number',
-    icon: React.createElement(PaddingVIcon, { size: 14 }),
+    icon: React.createElement(AppIcon, { name: 'paddingV', size: 16 }),
     min: 0,
     max: 200,
     step: 1,

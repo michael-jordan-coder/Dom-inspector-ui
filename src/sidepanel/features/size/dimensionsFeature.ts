@@ -8,6 +8,7 @@
 import React from 'react';
 import type { Feature, FeatureUINumber } from '../types';
 import type { ComputedStylesSnapshot } from '../../../shared/types';
+import { AppIcon } from '../../primitives/AppIcon';
 
 /**
  * Parse a CSS dimension value to a number.
@@ -41,9 +42,7 @@ export const widthFeature: Feature<number> = {
 
   ui: {
     type: 'number',
-    icon: React.createElement('span', {
-      style: { fontSize: 10, fontWeight: 600, color: 'var(--text-muted)' }
-    }, 'W'),
+    icon: React.createElement(AppIcon, { name: 'width', size: 16 }),
     min: 0,
     max: 9999,
     step: 1,
@@ -72,13 +71,10 @@ export const heightFeature: Feature<number> = {
 
   ui: {
     type: 'number',
-    icon: React.createElement('span', {
-      style: { fontSize: 10, fontWeight: 600, color: 'var(--text-muted)' }
-    }, 'H'),
+    icon: React.createElement(AppIcon, { name: 'height', size: 16 }),
     min: 0,
     max: 9999,
     step: 1,
     width: 80,
   } as FeatureUINumber,
 };
-

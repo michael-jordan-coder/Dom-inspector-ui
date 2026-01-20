@@ -30,7 +30,7 @@ const containerStyles: React.CSSProperties = {
   overflowX: 'hidden',
   flex: 1,
   width: '100%',
-  
+
   minWidth: 0, // Crucial for flex children to shrink properly
 };
 
@@ -64,6 +64,18 @@ export function InspectorSidebar({
 
       <Divider margin={spacing[1]} />
 
+      <LayoutSection
+        styles={styles}
+        onPatchApply={handlePatchApply}
+      />
+
+      <Divider margin={spacing[1]} />
+      <TypographySection
+        styles={styles}
+        onPatchApply={handlePatchApply}
+      />
+
+      <Divider margin={spacing[1]} />
       <AppearanceSection
         styles={styles}
         onPatchApply={handlePatchApply}
@@ -72,19 +84,9 @@ export function InspectorSidebar({
 
       <Divider margin={spacing[1]} />
 
-      <TypographySection
-        styles={styles}
-        onPatchApply={handlePatchApply}
-      />
 
-      <Divider margin={spacing[1]} />
 
-      <LayoutSection
-        styles={styles}
-        onPatchApply={handlePatchApply}
-      />
 
-      <Divider margin={spacing[1]} />
 
       <HistorySection
         canUndo={canUndo}

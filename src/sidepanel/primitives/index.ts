@@ -16,3 +16,5 @@ export { ColorField } from './ColorField';
 export { ColorPopover } from './ColorPopover';
 export { AlignmentGrid } from './AlignmentGrid';
 export { Dropdown } from './Dropdown';
+export { AppIcon } from './AppIcon';
+export type { IconName, IconState } from './AppIcon';

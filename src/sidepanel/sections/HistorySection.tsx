@@ -5,7 +5,7 @@
  */
 
 import React, { useCallback } from 'react';
-import { Undo2, Redo2 } from '../icons';
+import { AppIcon } from '../primitives';
 import { undo, redo } from '../messaging/sidepanelBridge';
 import { colors, spacing, radii } from '../tokens';
 
@@ -76,7 +76,7 @@ export function HistorySection({
         disabled={!canUndo}
         title="Undo (Ctrl+Z)"
       >
-        <Undo2 size={14} />
+        <AppIcon name="undo" size={14} />
         Undo
       </button>
       <button
@@ -88,7 +88,7 @@ export function HistorySection({
         disabled={!canRedo}
         title="Redo (Ctrl+Shift+Z)"
       >
-        <Redo2 size={14} />
+        <AppIcon name="redo" size={14} />
         Redo
       </button>
     </div>

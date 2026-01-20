@@ -1,6 +1,6 @@
 import React, { useCallback, useState, useRef, useEffect } from 'react';
 import { colors, radii, sizes, transitions, typography } from '../tokens';
-import { ChevronDown } from '../icons';
+import { AppIcon } from './AppIcon';
 import { useScrubbable } from '../hooks/useScrubbable';
 
 interface NumberFieldProps {
@@ -26,6 +26,8 @@ interface NumberFieldProps {
   width?: number | string;
   /** Show dropdown arrow */
   showDropdown?: boolean;
+  /** Custom content to render at the end */
+  suffix?: React.ReactNode;
 }
 
 const styles = {
@@ -115,6 +117,7 @@ export function NumberField({
   placeholder,
   width = 'auto',
   showDropdown = false,
+  suffix,
 }: NumberFieldProps): React.ReactElement {
   const [localValue, setLocalValue] = useState(String(value));
   const inputRef = useRef<HTMLInputElement>(null);
@@ -218,9 +221,10 @@ export function NumberField({
           {unit}
         </span>
       )}
-      {showDropdown && (
+      {suffix}
+      {showDropdown && !suffix && (
         <div style={styles.dropdown}>
-          <ChevronDown size={12} />
+          <AppIcon name="chevronDown" size={12} />
         </div>
       )}
       {/* Hide number input spinners */}

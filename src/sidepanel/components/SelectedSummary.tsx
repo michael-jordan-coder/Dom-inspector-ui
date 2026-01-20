@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { ElementMetadata } from '../../shared/types';
+import { AppIcon } from '../primitives';
 
 interface SelectedSummaryProps {
   element: ElementMetadata;
@@ -151,11 +152,7 @@ export function SelectedSummary({ element }: SelectedSummaryProps): React.ReactE
           />
         ) : (
           <div style={styles.screenshotPlaceholder}>
-            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-              <circle cx="8.5" cy="8.5" r="1.5" />
-              <polyline points="21,15 16,10 5,21" />
-            </svg>
+            <AppIcon name="image" size={24} state="muted" />
             <span>No preview available</span>
           </div>
         )}
@@ -186,13 +183,9 @@ export function SelectedSummary({ element }: SelectedSummaryProps): React.ReactE
             onBlur={() => setIsCopyFocused(false)}
           >
             {copied ? (
-              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
+              <AppIcon name="check" size={14} state="active" />
             ) : (
-              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
+              <AppIcon name="copy" size={14} />
             )}
           </button>
         </div>

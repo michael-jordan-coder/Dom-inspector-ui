@@ -9,14 +9,14 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { colors, radii, spacing } from '../tokens';
-import { 
-  getRecentColors, 
-  addRecentColor, 
-  isValidHex, 
+import {
+  getRecentColors,
+  addRecentColor,
+  isValidHex,
   normalizeHex,
-  colorToHex 
+  colorToHex
 } from '../features/color/colorUtils';
-import { Check } from '../icons';
+import { AppIcon } from './AppIcon';
 
 interface ColorPopoverProps {
   /** Currently selected color value */
@@ -152,17 +152,17 @@ export function ColorPopover({
   const [inputError, setInputError] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const recentColors = getRecentColors();
-  
+
   // Position popover below anchor, within viewport
   const [position, setPosition] = useState({ top: 0, left: 0 });
-  
+
   useEffect(() => {
     const containerWidth = 200;
     const containerHeight = 280; // Approximate max height
-    
+
     let top = anchorRect.bottom + 4;
     let left = anchorRect.left;
-    
+
     // Keep within viewport
     if (left + containerWidth > window.innerWidth - 8) {
       left = window.innerWidth - containerWidth - 8;
@@ -170,28 +170,28 @@ export function ColorPopover({
     if (top + containerHeight > window.innerHeight - 8) {
       top = anchorRect.top - containerHeight - 4;
     }
-    
+
     setPosition({ top, left });
   }, [anchorRect]);
-  
+
   const handleTokenClick = useCallback((tokenName: string, tokenValue: string) => {
     addRecentColor(tokenValue);
     onSelect(`var(${tokenName})`);
     onClose();
   }, [onSelect, onClose]);
-  
+
   const handleRecentClick = useCallback((color: string) => {
     addRecentColor(color);
     onSelect(color);
     onClose();
   }, [onSelect, onClose]);
-  
+
   const handleHexChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setHexInput(newValue);
     setInputError(newValue.length > 0 && !isValidHex(newValue.startsWith('#') ? newValue : `#${newValue}`));
   }, []);
-  
+
   const handleHexSubmit = useCallback(() => {
     const normalized = normalizeHex(hexInput);
     if (isValidHex(normalized)) {
@@ -202,7 +202,7 @@ export function ColorPopover({
       setInputError(true);
     }
   }, [hexInput, onSelect, onClose]);
-  
+
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleHexSubmit();
@@ -210,18 +210,18 @@ export function ColorPopover({
       onClose();
     }
   }, [handleHexSubmit, onClose]);
-  
+
   const currentHex = colorToHex(value);
-  
+
   return (
     <>
       {/* Overlay to catch clicks outside */}
       <div style={styles.overlay} onClick={onClose} />
-      
-      <div 
+
+      <div
         ref={containerRef}
-        style={{ 
-          ...styles.container, 
+        style={{
+          ...styles.container,
           top: position.top,
           left: position.left,
         }}
@@ -244,22 +244,22 @@ export function ColorPopover({
                     e.currentTarget.style.backgroundColor = 'transparent';
                   }}
                 >
-                  <div 
-                    style={{ 
-                      ...styles.tokenSwatch, 
-                      backgroundColor: token.value 
-                    }} 
+                  <div
+                    style={{
+                      ...styles.tokenSwatch,
+                      backgroundColor: token.value
+                    }}
                   />
                   <span style={styles.tokenName}>{token.name}</span>
                   {colorToHex(token.value) === currentHex && (
-                    <Check size={12} color={colors.accent} />
+                    <AppIcon name="check" size={12} color={colors.accent} />
                   )}
                 </div>
               ))}
             </div>
           </div>
         )}
-        
+
         {/* Recent colors section */}
         {recentColors.length > 0 && (
           <div style={styles.section}>
@@ -268,8 +268,8 @@ export function ColorPopover({
               {recentColors.map((color, i) => (
                 <div
                   key={`${color}-${i}`}
-                  style={{ 
-                    ...styles.recentSwatch, 
+                  style={{
+                    ...styles.recentSwatch,
                     backgroundColor: color,
                     borderColor: color === currentHex ? colors.accent : colors.border,
                   }}
@@ -286,16 +286,16 @@ export function ColorPopover({
             </div>
           </div>
         )}
-        
+
         {/* Hex input section */}
         <div style={styles.sectionLast}>
           <div style={styles.sectionTitle}>Hex Value</div>
           <div style={styles.hexInput}>
             <input
               type="text"
-              style={{ 
-                ...styles.input, 
-                ...(inputError ? styles.inputError : {}) 
+              style={{
+                ...styles.input,
+                ...(inputError ? styles.inputError : {})
               }}
               value={hexInput}
               onChange={handleHexChange}
@@ -303,12 +303,12 @@ export function ColorPopover({
               placeholder="#000000"
               autoFocus
             />
-            <button 
+            <button
               style={styles.applyBtn}
               onClick={handleHexSubmit}
               disabled={inputError}
             >
-              <Check size={14} />
+              <AppIcon name="check" size={14} />
             </button>
           </div>
         </div>

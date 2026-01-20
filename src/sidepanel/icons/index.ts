@@ -1,53 +1,12 @@
 /**
  * Icon System
  * 
- * Re-exports Lucide icons used throughout the inspector,
- * plus custom icons for controls not available in Lucide.
+ * Exports the centralized icon registry and AppIcon component.
+ * All icons in the sidepanel should use this system.
  */
 
-// =============================================================================
-// Lucide Icons (standard controls)
-// =============================================================================
-export {
-  Eye,
-  EyeOff,
-  Undo2,
-  Redo2,
-  ChevronDown,
-  Link,
-  Unlink,
-  Check,
-  X,
-  Move,
-  Grip,
-  LayoutGrid,
-  Rows3,
-  Columns3,
-  ArrowRight,
-  Square,
-  Maximize2,
-  Minimize2,
-} from 'lucide-react';
+// Export registry and types
+export { ICONS, type IconName, type TablerIcon } from './registry';
 
-// =============================================================================
-// Custom Icons (Figma-style controls not in Lucide)
-// =============================================================================
-export { CornerRadiusIcon } from './custom/CornerRadiusIcon';
-export { AlignLeftTextIcon } from './custom/AlignLeftTextIcon';
-export { AlignCenterTextIcon } from './custom/AlignCenterTextIcon';
-export { AlignRightTextIcon } from './custom/AlignRightTextIcon';
-export { AlignTopIcon } from './custom/AlignTopIcon';
-export { AlignCenterVIcon } from './custom/AlignCenterVIcon';
-export { AlignBottomIcon } from './custom/AlignBottomIcon';
-export { FlowColumnIcon } from './custom/FlowColumnIcon';
-export { FlowRowIcon } from './custom/FlowRowIcon';
-export { FlowWrapIcon } from './custom/FlowWrapIcon';
-export { FlowGridIcon } from './custom/FlowGridIcon';
-export { PaddingHIcon } from './custom/PaddingHIcon';
-export { PaddingVIcon } from './custom/PaddingVIcon';
-export { OpacityIcon } from './custom/OpacityIcon';
-export { GapIcon } from './custom/GapIcon';
-export { ClipContentIcon } from './custom/ClipContentIcon';
-export { TextColorIcon } from './custom/TextColorIcon';
-export { BackgroundColorIcon } from './custom/BackgroundColorIcon';
-export { BorderColorIcon } from './custom/BorderColorIcon';
+// Re-export AppIcon for convenience
+export { AppIcon, type IconState } from '../primitives/AppIcon';

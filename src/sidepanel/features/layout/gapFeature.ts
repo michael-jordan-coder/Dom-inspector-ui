@@ -2,16 +2,14 @@
  * Gap Feature
  * 
  * Controls the gap between flex/grid items.
- * Only applicable when element has display: flex or grid.
  */
 
+import React from 'react';
 import type { Feature, FeatureUINumber } from '../types';
 import type { ComputedStylesSnapshot } from '../../../shared/types';
-import { GapIcon } from '../../icons';
-import React from 'react';
+import { AppIcon } from '../../primitives/AppIcon';
 
 function parseGap(value: string): number {
-  // Handle "0px", "16px", "normal", etc.
   const num = parseInt(value);
   return isNaN(num) ? 0 : num;
 }
@@ -42,7 +40,7 @@ export const gapFeature: Feature<number> = {
 
   ui: {
     type: 'number',
-    icon: React.createElement(GapIcon, { size: 14 }),
+    icon: React.createElement(AppIcon, { name: 'gap', size: 16 }),
     min: 0,
     max: 200,
     step: 1,

@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { colors, spacing, transitions, typography } from '../tokens';
-import { Check } from '../icons';
+import { AppIcon } from './AppIcon';
 
 interface ToggleProps {
   /** Label text */
@@ -99,7 +99,7 @@ export function Toggle({
           ...(checked ? styles.checkboxChecked : {}),
         }}
       >
-        {checked && <Check size={12} strokeWidth={2.5} />}
+        {checked && <AppIcon name="check" size={12} stroke={3} />}
       </div>
       <span style={styles.label}>{label}</span>
     </div>

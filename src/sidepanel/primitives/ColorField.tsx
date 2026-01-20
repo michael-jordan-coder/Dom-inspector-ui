@@ -32,7 +32,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     height: sizes.controlHeight, // Consistent field height
-    backgroundColor: 'var(--surface-color-field)', // Darker for color fields
+    backgroundColor: colors.surfaceColorField, // Darker for color fields
     borderRadius: radii.sm,
     overflow: 'hidden',
     cursor: 'pointer',
@@ -154,7 +154,7 @@ export function ColorField({
           }
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = colors.surfaceRaised;
+          e.currentTarget.style.backgroundColor = colors.surfaceColorField;
         }}
       >
         {icon && <div style={styles.icon}>{icon}</div>}

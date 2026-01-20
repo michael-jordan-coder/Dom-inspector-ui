@@ -7,7 +7,7 @@
 
 import React, { useState, useRef, useCallback } from 'react';
 import { colors, radii, spacing, sizes, transitions } from '../tokens';
-import { ChevronDown, Check } from '../icons';
+import { AppIcon } from './AppIcon';
 
 export interface DropdownOption<T extends string | number> {
     value: T;
@@ -30,6 +30,8 @@ interface DropdownProps<T extends string | number> {
     placeholder?: string;
     /** Width */
     width?: number | string;
+    /** Custom trigger render prop */
+    renderTrigger?: (props: { onClick: () => void; isOpen: boolean; ref: React.RefObject<HTMLDivElement> }) => React.ReactNode;
 }
 
 const styles = {
@@ -119,6 +121,7 @@ export function Dropdown<T extends string | number>({
     icon,
     placeholder = 'Select...',
     width = '100%',
+    renderTrigger,
 }: DropdownProps<T>): React.ReactElement {
     const [isOpen, setIsOpen] = useState(false);
     const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -140,10 +143,18 @@ export function Dropdown<T extends string | number>({
                 top = rect.top - popoverHeight - 4;
             }
 
+            const popoverWidth = Math.max(rect.width, 180);
+            let left = rect.left;
+
+            // Prevent horizontal overflow
+            if (left + popoverWidth > window.innerWidth - 8) {
+                left = window.innerWidth - popoverWidth - 8;
+            }
+
             setPopoverPos({
                 top,
-                left: rect.left,
-                width: Math.max(rect.width, 180), // Min width popover
+                left,
+                width: popoverWidth,
             });
         }
     }, [options.length]);
@@ -166,25 +177,29 @@ export function Dropdown<T extends string | number>({
     return (
         <>
             {/* Trigger Button */}
-            <div
-                ref={triggerRef}
-                style={{
-                    ...styles.trigger,
-                    width,
-                    ...(disabled ? styles.triggerDisabled : {}),
-                }}
-                onClick={handleToggle}
-            >
-                {icon && <div style={styles.icon}>{icon}</div>}
+            {renderTrigger ? (
+                renderTrigger({ onClick: handleToggle, isOpen, ref: triggerRef })
+            ) : (
+                <div
+                    ref={triggerRef}
+                    style={{
+                        ...styles.trigger,
+                        width,
+                        ...(disabled ? styles.triggerDisabled : {}),
+                    }}
+                    onClick={handleToggle}
+                >
+                    {icon && <div style={styles.icon}>{icon}</div>}
 
-                <div style={styles.value}>
-                    {selectedOption ? selectedOption.label : placeholder}
-                </div>
+                    <div style={styles.value}>
+                        {selectedOption ? selectedOption.label : placeholder}
+                    </div>
 
-                <div style={styles.chevron}>
-                    <ChevronDown size={14} />
+                    <div style={styles.chevron}>
+                        <AppIcon name="chevronDown" size={14} />
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Popover Menu */}
             {isOpen && (
@@ -218,7 +233,7 @@ export function Dropdown<T extends string | number>({
                                         {option.icon}
                                         {option.label}
                                     </span>
-                                    {isSelected && <Check size={14} />}
+                                    {isSelected && <AppIcon name="check" size={14} />}
                                 </div>
                             );
                         })}
