@@ -10,7 +10,7 @@ import type {
   ElementMetadata,
   ComputedStylesSnapshot,
   StylePatch,
-  PromptHandoffExport,
+  VisualUIInspectorExport,
   Viewport,
 } from '../../shared/types';
 import { MessageType, createMessage, isExtensionMessage } from '../../shared/types';
@@ -330,27 +330,32 @@ export async function navigateToSibling(direction: 'prev' | 'next'): Promise<boo
 }
 
 // ============================================================================
-// Prompt Handoff Export
+// Export Data (Schema v1)
 // ============================================================================
 
 /**
- * Get export data for Prompt Handoff.
- * Returns the selected element, all patches, and stability signals.
+ * Get export data in Export Schema v1 format.
+ * Returns the validated export with all patches, warnings, and stability signals.
  */
 export async function getExportData(): Promise<{
-  exportData: PromptHandoffExport | null;
+  exportData: VisualUIInspectorExport | null;
   patchCount: number;
-  pageUrl?: string;
-  viewport?: Viewport;
+  pageUrl: string;
+  viewport: Viewport;
 }> {
   try {
     return await sendMessage<{
-      exportData: PromptHandoffExport | null;
+      exportData: VisualUIInspectorExport | null;
       patchCount: number;
-      pageUrl?: string;
-      viewport?: Viewport;
+      pageUrl: string;
+      viewport: Viewport;
     }>(createMessage(MessageType.GET_EXPORT_DATA));
   } catch {
-    return { exportData: null, patchCount: 0 };
+    return {
+      exportData: null,
+      patchCount: 0,
+      pageUrl: '',
+      viewport: { width: 0, height: 0 },
+    };
   }
 }

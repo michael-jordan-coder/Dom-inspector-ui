@@ -18,14 +18,12 @@ import { AppIcon } from '../primitives/AppIcon';
 import { colors, spacing, radii } from '../tokens';
 import { getExportData } from '../messaging/sidepanelBridge';
 import {
-  createExportSchemaV1,
   formatExportJSON,
   generateCSSDiff,
   generateChangeSummary,
 } from '../../shared/handoff';
 import { generateExecutionPrompt } from '../../shared/promptTemplate';
 import type {
-  PromptHandoffExport,
   VisualUIInspectorExport,
   ExportWarning,
   SelectorConfidence,
@@ -316,13 +314,14 @@ export function HandoffSection({
   refreshTrigger,
   onReturnToEditing,
 }: HandoffSectionProps): React.ReactElement {
-  const [legacyExport, setLegacyExport] = useState<PromptHandoffExport | null>(null);
+  const [exportData, setExportData] = useState<VisualUIInspectorExport | null>(null);
   const [patchCount, setPatchCount] = useState(0);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<ExportTab>('css');
 
   // Fetch export data when component mounts or refreshTrigger changes
+  // Data is already in Export Schema v1 format from the bridge
   useEffect(() => {
     let mounted = true;
 
@@ -331,7 +330,7 @@ export function HandoffSection({
       try {
         const result = await getExportData();
         if (mounted) {
-          setLegacyExport(result.exportData);
+          setExportData(result.exportData);
           setPatchCount(result.patchCount);
         }
       } catch (e) {
@@ -350,61 +349,35 @@ export function HandoffSection({
     };
   }, [refreshTrigger]);
 
-  // Convert legacy export to Export Schema v1
-  const exportV1 = useMemo((): VisualUIInspectorExport | null => {
-    if (!legacyExport) return null;
-
-    // Get page URL and viewport
-    const pageUrl = window.location?.href || 'unknown';
-    const viewport = {
-      width: window.innerWidth || 1440,
-      height: window.innerHeight || 900,
-    };
-
-    // Convert patches to internal format for the conversion function
-    const internalPatches = legacyExport.patches.map(p => ({
-      ...p,
-      timestamp: Date.now(),
-    }));
-
-    return createExportSchemaV1(
-      pageUrl,
-      viewport,
-      internalPatches,
-      legacyExport.stability.selectorResolution.status,
-      legacyExport.stability.selectorResolution.matchCount,
-      legacyExport.stability.identityMatch
-    );
-  }, [legacyExport]);
 
   // Generate CSS diff
   const cssDiff = useMemo(() => {
-    if (!exportV1) return '';
-    return generateCSSDiff(exportV1.patches);
-  }, [exportV1]);
+    if (!exportData) return '';
+    return generateCSSDiff(exportData.patches);
+  }, [exportData]);
 
   // Generate JSON export
   const jsonExport = useMemo(() => {
-    if (!exportV1) return '';
-    return formatExportJSON(exportV1);
-  }, [exportV1]);
+    if (!exportData) return '';
+    return formatExportJSON(exportData);
+  }, [exportData]);
 
   // Generate execution prompt (for AI)
   const executionPrompt = useMemo(() => {
-    if (!exportV1) return '';
-    return generateExecutionPrompt(exportV1);
-  }, [exportV1]);
+    if (!exportData) return '';
+    return generateExecutionPrompt(exportData);
+  }, [exportData]);
 
   // Get overall confidence level
   const overallConfidence = useMemo((): SelectorConfidence => {
-    if (!exportV1 || exportV1.patches.length === 0) return 'low';
+    if (!exportData || exportData.patches.length === 0) return 'low';
 
     // Return the lowest confidence among all patches
-    const confidences = exportV1.patches.map(p => p.selectorConfidence);
+    const confidences = exportData.patches.map(p => p.selectorConfidence);
     if (confidences.includes('low')) return 'low';
     if (confidences.includes('medium')) return 'medium';
     return 'high';
-  }, [exportV1]);
+  }, [exportData]);
 
   // Show feedback temporarily
   const showFeedback = useCallback((message: string) => {
@@ -444,7 +417,7 @@ export function HandoffSection({
   }, [executionPrompt, showFeedback]);
 
   const handleDownloadJSON = useCallback(() => {
-    if (!exportV1) return;
+    if (!exportData) return;
 
     try {
       const blob = new Blob([jsonExport], { type: 'application/json' });
@@ -461,11 +434,12 @@ export function HandoffSection({
       console.error('Failed to download:', e);
       showFeedback('Failed to download');
     }
-  }, [exportV1, jsonExport, showFeedback]);
+  }, [exportData, jsonExport, showFeedback]);
 
-  const hasChanges = patchCount > 0 && exportV1 !== null;
+  const hasChanges = patchCount > 0 && exportData !== null;
 
-  if (!hasChanges) {
+  // After this guard, exportData is guaranteed non-null
+  if (!hasChanges || !exportData) {
     return (
       <Section
         id="handoff"
@@ -496,17 +470,17 @@ export function HandoffSection({
             Ready for Handoff
           </div>
           <div style={styles.summaryMeta}>
-            <span>{generateChangeSummary(exportV1.patches)}</span>
-            <span>Page: {new URL(exportV1.pageUrl).pathname}</span>
-            <span>Viewport: {exportV1.viewport.width}×{exportV1.viewport.height}</span>
+            <span>{generateChangeSummary(exportData.patches)}</span>
+            <span>Page: {new URL(exportData.pageUrl).pathname}</span>
+            <span>Viewport: {exportData.viewport.width}×{exportData.viewport.height}</span>
           </div>
           <ConfidenceIndicator confidence={overallConfidence} />
         </div>
 
         {/* Warnings (non-dismissable per Phase 1 contract) */}
-        {exportV1.warnings.length > 0 && (
+        {exportData.warnings.length > 0 && (
           <div style={styles.warningsContainer}>
-            {exportV1.warnings.map((warning, i) => (
+            {exportData.warnings.map((warning, i) => (
               <WarningDisplay key={i} warning={warning} />
             ))}
           </div>

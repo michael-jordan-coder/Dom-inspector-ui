@@ -43,8 +43,8 @@ import {
   canRedo,
   getAllPatches,
 } from './history';
-import { createHandoffExport } from '../shared/handoff';
-import type { PromptHandoffExport } from '../shared/types';
+import { createExportSchemaV1 } from '../shared/handoff';
+import type { VisualUIInspectorExport } from '../shared/types';
 import {
   extractHierarchy,
   getNavigableParent,
@@ -644,10 +644,15 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendRe
     case MessageType.GET_EXPORT_DATA:
       {
         const patches = getAllPatches();
+        const pageUrl = window.location.href;
+        const viewport = {
+          width: window.innerWidth,
+          height: window.innerHeight,
+        };
 
         // No patches = no export data
         if (patches.length === 0 || !state.selectedElement) {
-          sendResponse({ exportData: null, patchCount: 0 });
+          sendResponse({ exportData: null, patchCount: 0, pageUrl, viewport });
           break;
         }
 
@@ -671,9 +676,10 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendRe
           );
         });
 
-        // Build export using the handoff utility
-        const exportData: PromptHandoffExport = createHandoffExport(
-          elementMetadata,
+        // Build export using Export Schema v1 directly
+        const exportData: VisualUIInspectorExport = createExportSchemaV1(
+          pageUrl,
+          viewport,
           patches,
           selectorStatus,
           matchCount,
@@ -682,12 +688,9 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendRe
 
         sendResponse({
           exportData,
-          patchCount: patches.length,
-          pageUrl: window.location.href,
-          viewport: {
-            width: window.innerWidth,
-            height: window.innerHeight,
-          },
+          patchCount: exportData.patches.length,
+          pageUrl,
+          viewport,
         });
       }
       break;

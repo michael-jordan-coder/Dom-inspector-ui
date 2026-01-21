@@ -1,0 +1,228 @@
+
+# Active Code Files Breakdown
+
+This document provides a detailed breakdown of the currently active code files in the workspace, focusing on their logical functions, responsibilities, and key code snippets.
+
+## 1. `src/background/serviceWorker.ts`
+
+**Role:** The background script acting as the central message bridge and state manager for the extension. It handles screenshot capture, message routing, and AI credential management.
+
+### Key Functions
+
+#### `captureElementScreenshot`
+Captures the visible tab, creates an offscreen canvas, crops it to the specified element's bounding rect, and returns a base64 image.
+
+```typescript
+async function captureElementScreenshot(
+  _tabId: number,
+  boundingRect: ElementMetadata['boundingRect']
+): Promise<string | undefined> {
+  try {
+    // If element is completely off-screen or has no size, skip
+    if (boundingRect.width <= 0 || boundingRect.height <= 0) {
+      return undefined;
+    }
+
+    // Capture the visible portion of the current window's active tab
+    const dataUrl = await chrome.tabs.captureVisibleTab({
+      format: 'png',
+    });
+
+    // ... (Canvas cropping logic)
+
+    return new Promise((resolve) => {
+      reader.onloadend = () => {
+        resolve(reader.result as string);
+      };
+      reader.onerror = () => {
+        resolve(undefined);
+      };
+      reader.readAsDataURL(croppedBlob);
+    });
+  } catch (error) {
+    console.error('[UI Inspector] Screenshot capture failed:', error);
+    return undefined;
+  }
+}
+```
+
+#### `forwardToContentScript`
+Routes messages from the side panel (or other parts of the extension) to the active tab's content script.
+
+```typescript
+async function forwardToContentScript(
+  message: ExtensionMessage,
+  sendResponse: (response: unknown) => void
+): Promise<void> {
+  try {
+    const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    
+    if (!activeTab?.id) {
+      sendResponse({ error: 'No active tab found' });
+      return;
+    }
+
+    // ... (Injection checks)
+
+    // Send message to content script with timeout
+    const response = await Promise.race([
+      chrome.tabs.sendMessage(activeTab.id, message),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Message timeout')), 5000)
+      )
+    ]) as unknown;
+    
+    sendResponse(response);
+  } catch (error) {
+    // ... (Error handling)
+  }
+}
+```
+
+---
+
+## 2. `src/ai/stateMachine.ts`
+
+**Role:** A strict Finite State Machine (FSM) governing the AI execution lifecycle (Phase 4 Contract), ensuring the system is always in a known valid state (`DISCONNECTED` → `CONNECTED_IDLE` → `READY` → `GENERATING` → `REVIEW_REQUIRED` → `CONFIRMED`).
+
+### Key Logic
+
+#### `prepareExecution`
+Runs strictly defined safety "Gates" (Schema Validation, Stability Acknowledgment, etc.) before allowing generation.
+
+```typescript
+  /**
+   * Transition: CONNECTED_IDLE → READY (if gates pass) or FAILED (if gates fail)
+   * Called when user initiates an AI action.
+   */
+  async prepareExecution(context: AIExecutionContext): Promise<GateCheckResult[]> {
+    if (this.state.state !== 'CONNECTED_IDLE') {
+      return [{
+        passed: false,
+        gate: 'NO_CONCURRENT_EXECUTION',
+        message: 'Cannot start execution: not in CONNECTED_IDLE state',
+      }];
+    }
+
+    // Run all gates
+    const gateResults = await this.runGates(context);
+    const allPassed = gateResults.every(r => r.passed);
+
+    if (allPassed) {
+      this.setState({
+        state: 'READY',
+        context,
+        error: null,
+      });
+    } else {
+      const failedGates = gateResults.filter(r => !r.passed);
+      this.setState({
+        state: 'FAILED',
+        context,
+        error: {
+          code: 'GATE_FAILED',
+          message: failedGates.map(g => g.message).join('; '),
+          details: failedGates,
+        },
+      });
+    }
+
+    return gateResults;
+  }
+```
+
+---
+
+## 3. `src/sidepanel/pages/AIPage.tsx`
+
+**Role:** The main UI page for the AI Assistant, connecting the React UI to the `AIStateMachine`.
+
+*   **`checkCredentials`**: Verifies if API keys exist on mount.
+*   **`handleGenerate`**: Orchestrates the generation flow:
+    1.  Retrieves `VisualUIInspectorExport` (v1) data.
+    2.  Calls `aiStateMachine.prepareExecution()` to run safety gates.
+    3.  Calls `generateExecutionPrompt()` to build the prompt.
+    4.  Executes `callAI()` to contact OpenAI/Anthropic.
+*   **`handleConfirm`**: Confirms the AI response and locks the state.
+
+---
+
+## 4. `src/sidepanel/components/AIConfirmation.tsx`
+
+**Role:** A UI component that enforces the "Human-in-the-Loop" review process before code is accepted. It requires explicit user acknowledgment of risks.
+
+### Acknowledgment Items
+
+```typescript
+const ACKNOWLEDGMENT_ITEMS = [
+  {
+    id: 'ephemeral',
+    text: 'I understand these changes were made to a live, runtime DOM, not source code.',
+  },
+  {
+    id: 'selector',
+    text: 'I have reviewed any selector warnings and accept the risk that selectors may break.',
+  },
+  {
+    id: 'limitations',
+    text: 'I understand that AI output is guidance, not guaranteed correctness.',
+  },
+  {
+    id: 'responsibility',
+    text: 'I am responsible for verification. From this point, I own the implementation.',
+  },
+];
+```
+
+### Component Structure
+
+```tsx
+export function AIConfirmation({
+  response,
+  onConfirm,
+  // ...
+}: AIConfirmationProps): React.ReactElement {
+  // Track acknowledgment state
+  const [acknowledged, setAcknowledged] = useState<Record<string, boolean>>({});
+  const allAcknowledged = ACKNOWLEDGMENT_ITEMS.every(item => acknowledged[item.id]);
+
+  return (
+    <div style={styles.container}>
+      {/* ... Output Display ... */}
+
+      {/* Acknowledgment Section */}
+      <div style={styles.acknowledgmentSection}>
+        <div style={styles.acknowledgmentTitle}>
+          Before confirming, please acknowledge:
+        </div>
+        <div style={styles.acknowledgmentList}>
+          {ACKNOWLEDGMENT_ITEMS.map((item) => (
+            <label key={item.id} style={styles.acknowledgmentItem}>
+              <input
+                type="checkbox"
+                checked={!!acknowledged[item.id] || isConfirmed}
+                onChange={() => handleCheckboxChange(item.id)}
+                disabled={isConfirmed}
+              />
+              <span>{item.text}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+      
+      {/* ... Buttons ... */}
+    </div>
+  );
+}
+```
+
+---
+
+## 5. `src/ai/types.ts`
+
+**Role:** TypeScript definitions for the AI system, ensuring type safety across the application.
+
+*   `AIConnectionState`: The 8 possible states of the AI FSM.
+*   `AICredentials`: Structure for storing API keys.
+*   `VisualUIInspectorExport`: The Schema v1 export format.
+*   `AIResponse`: The structured response from the AI provider.

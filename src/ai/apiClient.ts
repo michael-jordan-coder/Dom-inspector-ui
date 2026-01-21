@@ -26,8 +26,8 @@ const API_ENDPOINTS: Record<AIProvider, string> = {
 };
 
 const DEFAULT_MODELS: Record<AIProvider, string> = {
-  openai: 'gpt-4-turbo-preview',
-  anthropic: 'claude-3-opus-20240229',
+  openai: 'gpt-4.1',
+  anthropic: 'claude-3.5-opus',
 };
 
 // ============================================================================

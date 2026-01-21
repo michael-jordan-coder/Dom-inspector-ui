@@ -8,12 +8,9 @@
  */
 
 import type {
-  ElementMetadata,
   StylePatch,
   SelectorResolutionStatus,
-  StabilitySignals,
   HandoffStylePatch,
-  PromptHandoffExport,
   VisualUIInspectorExport,
   FinalPatch,
   SelectorConfidence,
@@ -352,47 +349,6 @@ export function generateWarnings(
   return warnings;
 }
 
-// ============================================================================
-// Legacy Export Generation (Internal Use)
-// ============================================================================
-
-/**
- * Create a complete Prompt Handoff export payload.
- * @deprecated Use createExportSchemaV1 for external exports
- *
- * @param element - The selected element metadata
- * @param patches - Array of style patches (will filter to valid ones)
- * @param selectorStatus - Result of resolving the element's selector
- * @param matchCount - Number of elements matching the selector
- * @param identityMatch - Whether current element matches patch identity tokens
- * @returns Complete PromptHandoffExport ready for JSON serialization
- */
-export function createHandoffExport(
-  element: ElementMetadata,
-  patches: StylePatch[],
-  selectorStatus: SelectorResolutionStatus,
-  matchCount: number,
-  identityMatch: boolean
-): PromptHandoffExport {
-  // Collapse patches first to remove noise, then filter for validity
-  const collapsedPatches = collapsePatches(patches);
-  const validPatches = filterValidPatches(collapsedPatches);
-
-  const stability: StabilitySignals = {
-    selectorResolution: {
-      status: selectorStatus,
-      matchCount,
-    },
-    identityMatch,
-    usesNthOfType: usesNthOfType(element.selector),
-  };
-
-  return {
-    selectedElement: element,
-    patches: validPatches,
-    stability,
-  };
-}
 
 // ============================================================================
 // JSON Formatting
@@ -414,46 +370,6 @@ export function formatExportJSONCompact(exportData: VisualUIInspectorExport): st
   return JSON.stringify(exportData);
 }
 
-/**
- * Format a PromptHandoffExport as a pretty-printed JSON string.
- * @deprecated Use formatExportJSON with VisualUIInspectorExport
- */
-export function formatHandoffJSON(handoff: PromptHandoffExport): string {
-  return JSON.stringify(handoff, null, 2);
-}
-
-/**
- * Format a PromptHandoffExport as a compact JSON string.
- * @deprecated Use formatExportJSONCompact with VisualUIInspectorExport
- */
-export function formatHandoffJSONCompact(handoff: PromptHandoffExport): string {
-  return JSON.stringify(handoff);
-}
-
-// ============================================================================
-// Convenience Exports
-// ============================================================================
-
-/**
- * Create and format a handoff export in a single call.
- * @deprecated Use createExportSchemaV1 + formatExportJSON
- */
-export function generateHandoffJSON(
-  element: ElementMetadata,
-  patches: StylePatch[],
-  selectorStatus: SelectorResolutionStatus,
-  matchCount: number,
-  identityMatch: boolean
-): string {
-  const handoff = createHandoffExport(
-    element,
-    patches,
-    selectorStatus,
-    matchCount,
-    identityMatch
-  );
-  return formatHandoffJSON(handoff);
-}
 
 /**
  * Generate a complete Export Schema v1 JSON string.

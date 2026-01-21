@@ -46,7 +46,7 @@ export function generateExecutionPrompt(exportData: VisualUIInspectorExport): st
 Your job:
 Implement the Visual UI Inspector's captured UI changes into the project's SOURCE CODE (not inline styles), using the repo you have open.
 
-You MUST treat the provided visual deltas as IMMUTABLE TRUTH:
+You MUST treat the provided VisualUIInspectorExport (v1) as IMMUTABLE TRUTH:
 - Do not redesign
 - Do not change values
 - Do not "improve"

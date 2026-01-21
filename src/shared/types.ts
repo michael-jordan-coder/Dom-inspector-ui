@@ -252,47 +252,16 @@ export interface VisualUIInspectorExport {
 }
 
 // ============================================================================
-// Legacy / Internal Export Types (for backwards compatibility)
+// Internal Types (used during processing)
 // ============================================================================
 
 /**
- * Stability signals for selector confidence (internal use).
- * @deprecated Use VisualUIInspectorExport with selectorConfidence on FinalPatch
- */
-export interface StabilitySignals {
-  /** Result of resolving the selector at export time */
-  selectorResolution: {
-    /** Resolution status: OK, NOT_FOUND, AMBIGUOUS, or INVALID_SELECTOR */
-    status: SelectorResolutionStatus;
-    /** Number of elements matching the selector */
-    matchCount: number;
-  };
-  /** Whether the current element identity matches the patch identity tokens */
-  identityMatch: boolean;
-  /** Whether the selector uses :nth-of-type (position-dependent, fragile) */
-  usesNthOfType: boolean;
-}
-
-/**
  * Style patch with required identity token for internal processing.
+ * Used during export generation before converting to FinalPatch.
  */
 export interface HandoffStylePatch extends Omit<StylePatch, 'identityToken'> {
   /** Required identity token for element verification */
   identityToken: ElementIdentity;
-}
-
-/**
- * Internal handoff data structure (used during session).
- * Use VisualUIInspectorExport for actual exports.
- * @deprecated Use VisualUIInspectorExport for external consumption
- */
-export interface PromptHandoffExport {
-  /** Target element with full DOM context */
-  selectedElement: ElementMetadata;
-  /** Visual changes with before/after values */
-  patches: HandoffStylePatch[];
-  /** Confidence signals for selector targeting */
-  stability: StabilitySignals;
 }
 
 // ============================================================================
@@ -501,7 +470,7 @@ export interface GetExportDataMessage extends BaseMessage {
 
 export interface ExportDataMessage extends BaseMessage {
   type: MessageType.EXPORT_DATA;
-  payload: PromptHandoffExport | null;
+  payload: VisualUIInspectorExport | null;
 }
 
 // Union type of all messages

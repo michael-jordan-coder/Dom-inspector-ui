@@ -22,7 +22,7 @@ import {
 } from '../../ai';
 import { getExportData } from '../messaging/sidepanelBridge';
 import { generateExecutionPrompt } from '../../shared/promptTemplate';
-import { createExportSchemaV1 } from '../../shared/handoff';
+import { EXPORT_SCHEMA_VERSION } from '../../shared/types';
 
 // ============================================================================
 // System Prompt (Phase 3 Guardrails)
@@ -340,29 +340,30 @@ export function AIPage({ hasChanges, patchCount, onSwitchToInspector }: AIPagePr
         aiStateMachine.returnToIdle();
       }
 
-      // Get fresh export data
-      const exportResult = await getExportData();
-      if (!exportResult.exportData || exportResult.patchCount === 0) {
+      // Get fresh export data (now returns v1 schema directly)
+      const { exportData, patchCount: fetchedPatchCount } = await getExportData();
+      if (!exportData || fetchedPatchCount === 0) {
         setError('No visual changes to process. Make some edits in the Inspector first.');
         setIsLoading(false);
         return;
       }
 
-      // Convert to Export Schema v1 (Required for AI)
-      const { exportData, pageUrl, viewport } = exportResult;
-      const v1Export = createExportSchemaV1(
-        pageUrl || 'unknown',
-        viewport || { width: 1280, height: 800 }, // Fallback default
-        exportData.patches,
-        exportData.stability.selectorResolution.status,
-        exportData.stability.selectorResolution.matchCount,
-        exportData.stability.identityMatch
-      );
+      // Dev-only guard: Ensure we never drift from the canonical schema
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if ((import.meta as any).env?.DEV) {
+        if (exportData.exportVersion !== EXPORT_SCHEMA_VERSION) {
+          console.error('[Assertion Failed] Schema version mismatch', {
+            expected: EXPORT_SCHEMA_VERSION,
+            actual: exportData.exportVersion
+          });
+          throw new Error(`Schema version mismatch: expected ${EXPORT_SCHEMA_VERSION}`);
+        }
+      }
 
       // 1. Prepare Execution Context & Run Gates
       const context: any = {
         mode: 'universal', // Defaulting to universal for Phase 0/1
-        exportPayload: v1Export,
+        exportPayload: exportData,
         stabilityAcknowledged: true, // Assuming explicit user action in inspector implies ack for now, or TODO: add UI for this
       };
 
@@ -380,9 +381,9 @@ export function AIPage({ hasChanges, patchCount, onSwitchToInspector }: AIPagePr
       aiStateMachine.startGeneration();
 
       // Generate prompt from export data
-      const userMessage = generateExecutionPrompt(v1Export);
+      const userMessage = generateExecutionPrompt(exportData);
 
-      console.log('[DEBUG] AI Prompt Source Version:', v1Export.exportVersion);
+      console.log('[DEBUG] AI Prompt Source Version:', exportData.exportVersion);
 
       // Make AI call
       const result = await callAI({
