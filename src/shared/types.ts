@@ -165,12 +165,99 @@ export interface PatchError {
 }
 
 // ============================================================================
-// Prompt Handoff Export
+// Export Schema v1 (Phase 2 Contract)
+// ============================================================================
+
+/** Current export schema version */
+export const EXPORT_SCHEMA_VERSION = '1.0.0' as const;
+
+/**
+ * Selector confidence level indicating reliability of the selector.
+ * - high: Unique ID or highly specific, stable attributes. Unlikely to break.
+ * - medium: Class names or tag combinations. May break if CSS/HTML is refactored.
+ * - low: Positional or structural matching. Likely to break.
+ */
+export type SelectorConfidence = 'high' | 'medium' | 'low';
+
+/**
+ * Warning codes that indicate potential issues with the export.
+ * AI consumers MUST NOT ignore warnings.
+ */
+export type ExportWarningCode =
+  | 'SELECTOR_POSITIONAL'      // Selector uses :nth-child, :first-child, etc.
+  | 'SELECTOR_NO_ID'           // No ID was available on the element
+  | 'MULTIPLE_ELEMENTS_MATCHED' // Selector matched more than one element
+  | 'ELEMENT_NOT_FOUND'        // Element could not be re-queried at export time
+  | 'VIEWPORT_MISMATCH'        // Captured viewport differs from common breakpoints
+  | 'IDENTITY_MISMATCH';       // Element identity doesn't match patch identity tokens
+
+/**
+ * Warning object attached to exports. Machine-readable codes with human messages.
+ */
+export interface ExportWarning {
+  /** Machine-readable warning code */
+  code: ExportWarningCode;
+  /** Human-readable warning message */
+  message: string;
+  /** Selectors affected by this warning (if applicable) */
+  affectedSelectors?: string[];
+}
+
+/**
+ * FinalPatch - The atomic unit of trust in the system.
+ * Represents a single, intentional visual change to a single CSS property
+ * on a single element. Conforms to Export Schema v1.
+ */
+export interface FinalPatch {
+  /** CSS selector used to identify the target element at export time */
+  selector: string;
+  /** CSS property name (e.g., margin-top, background-color) */
+  property: string;
+  /** Computed value of the property BEFORE any changes. null if not captured. */
+  originalValue: string | null;
+  /** User's final intended value for the property */
+  finalValue: string;
+  /** Signal indicating the reliability of the selector */
+  selectorConfidence: SelectorConfidence;
+  /** ISO 8601 timestamp of when the FinalPatch was frozen for export */
+  capturedAt: string;
+}
+
+/**
+ * Viewport dimensions at capture time.
+ */
+export interface Viewport {
+  width: number;
+  height: number;
+}
+
+/**
+ * VisualUIInspectorExport - Export Schema v1
+ * The canonical JSON schema for all exports from Visual UI Inspector.
+ * This is the ONLY allowed interface between the tool and any external consumer.
+ */
+export interface VisualUIInspectorExport {
+  /** Schema version. Consumers must check this before parsing. */
+  exportVersion: typeof EXPORT_SCHEMA_VERSION;
+  /** ISO 8601 timestamp of when this export was generated */
+  capturedAt: string;
+  /** URL of the page where changes were made */
+  pageUrl: string;
+  /** Viewport dimensions at capture time */
+  viewport: Viewport;
+  /** List of FinalPatches representing all visual changes */
+  patches: FinalPatch[];
+  /** Human-readable warnings about this export. Consumers should surface these. */
+  warnings: ExportWarning[];
+}
+
+// ============================================================================
+// Legacy / Internal Export Types (for backwards compatibility)
 // ============================================================================
 
 /**
- * Stability signals for selector confidence.
- * Helps the AI coding agent assess targeting reliability.
+ * Stability signals for selector confidence (internal use).
+ * @deprecated Use VisualUIInspectorExport with selectorConfidence on FinalPatch
  */
 export interface StabilitySignals {
   /** Result of resolving the selector at export time */
@@ -187,8 +274,7 @@ export interface StabilitySignals {
 }
 
 /**
- * Style patch with required identity token for handoff export.
- * Enforces identity token presence for reliable targeting.
+ * Style patch with required identity token for internal processing.
  */
 export interface HandoffStylePatch extends Omit<StylePatch, 'identityToken'> {
   /** Required identity token for element verification */
@@ -196,9 +282,9 @@ export interface HandoffStylePatch extends Omit<StylePatch, 'identityToken'> {
 }
 
 /**
- * Complete export payload for Prompt Handoff.
- * Contains all information needed for an AI coding agent to implement
- * verified visual changes in source code.
+ * Internal handoff data structure (used during session).
+ * Use VisualUIInspectorExport for actual exports.
+ * @deprecated Use VisualUIInspectorExport for external consumption
  */
 export interface PromptHandoffExport {
   /** Target element with full DOM context */

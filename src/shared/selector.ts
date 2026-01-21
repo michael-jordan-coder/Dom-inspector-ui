@@ -8,7 +8,7 @@
  * 3. DOM path using tagName:nth-of-type chain
  */
 
-import type { SelectorResolutionResult } from './types';
+import type { SelectorResolutionResult, SelectorConfidence } from './types';
 
 const TEST_ATTRIBUTES = [
   'data-testid',
@@ -170,4 +170,86 @@ export function getElementDescription(element: Element): string {
     : '';
 
   return `${tag}${id}${classes}`;
+}
+
+// ============================================================================
+// Selector Confidence (F-002)
+// ============================================================================
+
+/**
+ * Check if a selector uses positional pseudo-classes.
+ * These are fragile and likely to break on DOM changes.
+ */
+export function usesPositionalSelector(selector: string): boolean {
+  return /:nth-(of-type|child|last-of-type|last-child|first-child|first-of-type)\(/i.test(selector);
+}
+
+/**
+ * Check if a selector contains a unique ID.
+ */
+export function hasUniqueId(selector: string): boolean {
+  // Match #id followed by space, end, combinator, or pseudo
+  return /#[a-zA-Z][a-zA-Z0-9_-]*(?:\s|$|>|\+|~|\[|:|\.|,)/.test(selector + ' ') || 
+         /^#[a-zA-Z][a-zA-Z0-9_-]*$/.test(selector);
+}
+
+/**
+ * Check if a selector uses stable data attributes like data-testid.
+ */
+export function hasStableDataAttribute(selector: string): boolean {
+  return /\[data-(testid|test-id|cy|id|test|e2e)/.test(selector);
+}
+
+/**
+ * Compute the selector confidence level.
+ * 
+ * Confidence levels (per Phase 2 contract):
+ * - high: Unique ID or highly specific, stable attributes. Unlikely to break.
+ * - medium: Class names or tag combinations. May break if CSS/HTML is refactored.
+ * - low: Positional or structural matching. Likely to break.
+ * 
+ * @param selector - The CSS selector to analyze
+ * @param matchCount - Number of elements the selector matches (1 = unique)
+ * @returns SelectorConfidence level
+ */
+export function computeSelectorConfidence(
+  selector: string,
+  matchCount: number = 1
+): SelectorConfidence {
+  // Multiple matches = always low confidence
+  if (matchCount > 1) {
+    return 'low';
+  }
+
+  // Positional selectors = always low confidence
+  if (usesPositionalSelector(selector)) {
+    return 'low';
+  }
+
+  // Unique ID or stable data attribute = high confidence
+  if (hasUniqueId(selector) || hasStableDataAttribute(selector)) {
+    return 'high';
+  }
+
+  // Class-based or attribute selectors = medium confidence
+  if (selector.includes('.') || selector.includes('[')) {
+    return 'medium';
+  }
+
+  // Tag-only or generic selectors = low confidence
+  return 'low';
+}
+
+/**
+ * Compute selector confidence with match count from DOM query.
+ * Convenience function that queries the DOM to get match count.
+ */
+export function computeSelectorConfidenceWithDOM(selector: string): SelectorConfidence {
+  try {
+    const matchCount = document.querySelectorAll(selector).length;
+    return computeSelectorConfidence(selector, matchCount);
+  } catch {
+    // Invalid selector = low confidence
+    return 'low';
+  }
 }

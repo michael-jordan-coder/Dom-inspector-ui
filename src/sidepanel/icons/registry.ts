@@ -68,6 +68,9 @@ import {
     IconMaximize,
     IconSearch,
     IconCommand,
+    IconDownload,
+    IconAlertCircle,
+    IconAlertTriangle,
 } from '@tabler/icons-react';
 
 import type { Icon } from '@tabler/icons-react';
@@ -145,6 +148,9 @@ export const ICONS = {
     maximize: IconMaximize,
     search: IconSearch,
     command: IconCommand,
+    download: IconDownload,
+    alertCircle: IconAlertCircle,
+    alertTriangle: IconAlertTriangle,
 } as const;
 
 export type IconName = keyof typeof ICONS;

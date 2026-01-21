@@ -2,11 +2,13 @@
  * Service Worker - Background Script
  * 
  * Acts as a message bridge between the side panel and content scripts.
- * Also handles extension lifecycle events.
+ * Also handles extension lifecycle events and AI credential management.
  */
 
 import type { ExtensionMessage, ElementMetadata } from '../shared/types';
 import { MessageType, isExtensionMessage, createMessage } from '../shared/types';
+import type { AICredentials } from '../ai/types';
+import { AI_STORAGE_KEYS } from '../ai/types';
 
 // ============================================================================
 // Screenshot Capture
@@ -319,5 +321,81 @@ chrome.runtime.onInstalled.addListener((details) => {
     console.log('[UI Inspector] First install - welcome!');
   }
 });
+
+// ============================================================================
+// AI Credential Management (B-002)
+// ============================================================================
+
+/**
+ * Save AI credentials to chrome.storage.local.
+ * Per Phase 4 contract: stored encrypted at rest by the browser.
+ */
+export async function saveAICredentials(credentials: AICredentials): Promise<void> {
+  try {
+    await chrome.storage.local.set({
+      [AI_STORAGE_KEYS.CREDENTIALS]: credentials,
+    });
+    console.log('[UI Inspector] AI credentials saved');
+  } catch (error) {
+    console.error('[UI Inspector] Failed to save AI credentials:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get stored AI credentials from chrome.storage.local.
+ * Returns null if no credentials are stored.
+ */
+export async function getAICredentials(): Promise<AICredentials | null> {
+  try {
+    const result = await chrome.storage.local.get(AI_STORAGE_KEYS.CREDENTIALS);
+    return result[AI_STORAGE_KEYS.CREDENTIALS] || null;
+  } catch (error) {
+    console.error('[UI Inspector] Failed to get AI credentials:', error);
+    return null;
+  }
+}
+
+/**
+ * Clear AI credentials from chrome.storage.local.
+ * Per Phase 4 contract: revocation deletes credentials from storage.
+ */
+export async function clearAICredentials(): Promise<void> {
+  try {
+    await chrome.storage.local.remove(AI_STORAGE_KEYS.CREDENTIALS);
+    console.log('[UI Inspector] AI credentials cleared');
+  } catch (error) {
+    console.error('[UI Inspector] Failed to clear AI credentials:', error);
+    throw error;
+  }
+}
+
+/**
+ * Mark AI credentials as invalid (e.g., after 401 response).
+ * Per Phase 4 contract: credentials are not auto-cleared, user must re-enter.
+ */
+export async function markAICredentialsInvalid(): Promise<void> {
+  try {
+    const credentials = await getAICredentials();
+    if (credentials) {
+      await saveAICredentials({
+        ...credentials,
+        isInvalid: true,
+      });
+      console.log('[UI Inspector] AI credentials marked as invalid');
+    }
+  } catch (error) {
+    console.error('[UI Inspector] Failed to mark AI credentials invalid:', error);
+    throw error;
+  }
+}
+
+/**
+ * Check if AI credentials are configured and valid.
+ */
+export async function hasValidAICredentials(): Promise<boolean> {
+  const credentials = await getAICredentials();
+  return credentials !== null && !credentials.isInvalid;
+}
 
 console.log('[UI Inspector] Service worker loaded');
