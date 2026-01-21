@@ -11,6 +11,7 @@ const SELECTED_OVERLAY_ID = '__ui_inspector_selected_overlay__';
 const PADDING_OVERLAY_ID = '__ui_inspector_padding_overlay__';
 const MARGIN_OVERLAY_ID = '__ui_inspector_margin_overlay__';
 const SPACING_LABEL_ID = '__ui_inspector_spacing_label__';
+const TEXT_EDITOR_ID = '__ui_inspector_text_editor__';
 
 interface OverlayState {
   hoverOverlay: HTMLElement | null;
@@ -18,8 +19,12 @@ interface OverlayState {
   paddingOverlay: HTMLElement | null;
   marginOverlay: HTMLElement | null;
   spacingLabel: HTMLElement | null;
+  textEditor: HTMLTextAreaElement | null;
   spacingVisualizationEnabled: boolean;
   currentElement: Element | null;
+  isTextEditing: boolean;
+  originalTextContent: string;
+  onTextEditComplete: ((newText: string | null) => void) | null;
 }
 
 const state: OverlayState = {
@@ -28,8 +33,12 @@ const state: OverlayState = {
   paddingOverlay: null,
   marginOverlay: null,
   spacingLabel: null,
+  textEditor: null,
   spacingVisualizationEnabled: false,
   currentElement: null,
+  isTextEditing: false,
+  originalTextContent: '',
+  onTextEditComplete: null,
 };
 
 /**
@@ -339,6 +348,217 @@ export function hideSpacingVisualization(): void {
 }
 
 /**
+ * Check if an element contains editable text.
+ */
+export function isTextEditable(element: Element): boolean {
+  // Block-level or inline elements that commonly contain editable text
+  const editableTagNames = [
+    'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+    'span', 'a', 'label', 'li', 'td', 'th',
+    'button', 'div', 'section', 'article',
+    'figcaption', 'blockquote', 'cite', 'em', 'strong', 'b', 'i', 'u',
+  ];
+  
+  const tagName = element.tagName.toLowerCase();
+  
+  // Skip form inputs, iframes, images, scripts, etc.
+  const nonEditableTags = ['input', 'textarea', 'select', 'iframe', 'img', 'video', 'audio', 'canvas', 'svg', 'script', 'style'];
+  if (nonEditableTags.includes(tagName)) return false;
+  
+  // Check if element has direct text content (not just from children)
+  const hasDirectText = Array.from(element.childNodes).some(
+    node => node.nodeType === Node.TEXT_NODE && node.textContent?.trim()
+  );
+  
+  // Allow if it's a known editable tag or has direct text
+  return editableTagNames.includes(tagName) || hasDirectText;
+}
+
+/**
+ * Get the direct text content of an element (excluding nested elements' text).
+ */
+function getDirectTextContent(element: Element): string {
+  return Array.from(element.childNodes)
+    .filter(node => node.nodeType === Node.TEXT_NODE)
+    .map(node => node.textContent || '')
+    .join('');
+}
+
+/**
+ * Create the inline text editor.
+ */
+function createTextEditor(): HTMLTextAreaElement {
+  const existing = document.getElementById(TEXT_EDITOR_ID) as HTMLTextAreaElement;
+  if (existing) {
+    return existing;
+  }
+
+  const editor = document.createElement('textarea');
+  editor.id = TEXT_EDITOR_ID;
+  
+  Object.assign(editor.style, {
+    position: 'fixed',
+    zIndex: '2147483647',
+    boxSizing: 'border-box',
+    display: 'none',
+    resize: 'none',
+    overflow: 'hidden',
+    outline: 'none',
+    border: 'none',
+    borderRadius: '0',
+    backgroundColor: 'transparent',
+    boxShadow: 'none',
+    padding: '0',
+    margin: '0',
+    minWidth: '40px',
+    minHeight: '1.2em',
+  });
+
+  // Handle keyboard events
+  editor.addEventListener('keydown', handleTextEditorKeyDown);
+  editor.addEventListener('blur', handleTextEditorBlur);
+  editor.addEventListener('input', handleTextEditorInput);
+
+  document.documentElement.appendChild(editor);
+  return editor;
+}
+
+/**
+ * Handle keydown in text editor.
+ */
+function handleTextEditorKeyDown(e: KeyboardEvent): void {
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    e.stopPropagation();
+    cancelTextEdit();
+  } else if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    e.stopPropagation();
+    commitTextEdit();
+  }
+}
+
+/**
+ * Handle blur (focus lost) on text editor.
+ */
+function handleTextEditorBlur(): void {
+  // Small delay to allow click events to process first
+  setTimeout(() => {
+    if (state.isTextEditing) {
+      commitTextEdit();
+    }
+  }, 100);
+}
+
+/**
+ * Handle input changes for auto-resize.
+ */
+function handleTextEditorInput(): void {
+  const editor = state.textEditor;
+  if (!editor) return;
+  
+  // Auto-resize height
+  editor.style.height = 'auto';
+  editor.style.height = `${editor.scrollHeight}px`;
+}
+
+/**
+ * Show the inline text editor for an element.
+ */
+export function showTextEditor(
+  element: Element,
+  onComplete: (newText: string | null) => void
+): void {
+  if (!state.textEditor) {
+    state.textEditor = createTextEditor();
+  }
+  
+  const editor = state.textEditor;
+  const rect = element.getBoundingClientRect();
+  const computed = window.getComputedStyle(element);
+  
+  // Get text content
+  const textContent = getDirectTextContent(element) || element.textContent || '';
+  state.originalTextContent = textContent.trim();
+  state.onTextEditComplete = onComplete;
+  state.isTextEditing = true;
+  
+  // Match element's font styles
+  Object.assign(editor.style, {
+    display: 'block',
+    top: `${rect.top}px`,
+    left: `${rect.left}px`,
+    width: `${Math.max(rect.width, 60)}px`,
+    height: `${rect.height}px`,
+    fontFamily: computed.fontFamily,
+    fontSize: computed.fontSize,
+    fontWeight: computed.fontWeight,
+    lineHeight: computed.lineHeight,
+    letterSpacing: computed.letterSpacing,
+    textAlign: computed.textAlign as string,
+    color: computed.color,
+    padding: `${computed.paddingTop} ${computed.paddingRight} ${computed.paddingBottom} ${computed.paddingLeft}`,
+  });
+  
+  editor.value = state.originalTextContent;
+  editor.focus();
+  editor.select();
+  
+  // Auto-resize
+  handleTextEditorInput();
+}
+
+/**
+ * Commit the text edit.
+ */
+function commitTextEdit(): void {
+  if (!state.isTextEditing) return;
+  
+  const editor = state.textEditor;
+  const newText = editor?.value.trim() || '';
+  const callback = state.onTextEditComplete;
+  
+  hideTextEditor();
+  
+  // Only trigger callback if text actually changed
+  if (newText !== state.originalTextContent && callback) {
+    callback(newText);
+  }
+}
+
+/**
+ * Cancel the text edit.
+ */
+function cancelTextEdit(): void {
+  const callback = state.onTextEditComplete;
+  hideTextEditor();
+  
+  if (callback) {
+    callback(null); // null indicates cancellation
+  }
+}
+
+/**
+ * Hide the text editor.
+ */
+export function hideTextEditor(): void {
+  if (state.textEditor) {
+    state.textEditor.style.display = 'none';
+    state.textEditor.value = '';
+  }
+  state.isTextEditing = false;
+  state.originalTextContent = '';
+  state.onTextEditComplete = null;
+}
+
+/**
+ * Check if text editing is active.
+ */
+export function isTextEditingActive(): boolean {
+  return state.isTextEditing;
+}
+
+/**
  * Clean up all overlays.
  */
 export function destroyOverlays(): void {
@@ -362,6 +582,14 @@ export function destroyOverlays(): void {
     state.spacingLabel.remove();
     state.spacingLabel = null;
   }
+  if (state.textEditor) {
+    state.textEditor.removeEventListener('keydown', handleTextEditorKeyDown);
+    state.textEditor.removeEventListener('blur', handleTextEditorBlur);
+    state.textEditor.removeEventListener('input', handleTextEditorInput);
+    state.textEditor.remove();
+    state.textEditor = null;
+  }
   state.currentElement = null;
   state.spacingVisualizationEnabled = false;
+  state.isTextEditing = false;
 }

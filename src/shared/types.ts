@@ -25,6 +25,45 @@ export interface ElementMetadata {
   computedStyles: ComputedStylesSnapshot;
   /** Base64-encoded screenshot of the element (data URL) */
   screenshot?: string;
+  /** Element hierarchy info (populated when selected) */
+  hierarchy?: ElementHierarchy;
+}
+
+// ============================================================================
+// Element Hierarchy
+// ============================================================================
+
+export interface ElementHierarchy {
+  /** Parent element summary (null if at body/root) */
+  parent: ElementSummary | null;
+  /** Direct children of current element */
+  children: ElementSummary[];
+  /** Breadcrumb path from body to current element */
+  breadcrumb: BreadcrumbItem[];
+  /** Index among siblings (0-based) */
+  siblingIndex: number;
+  /** Total number of siblings including self */
+  siblingCount: number;
+}
+
+export interface ElementSummary {
+  /** Unique selector for this element */
+  selector: string;
+  /** Tag name (div, span, p, etc.) */
+  tagName: string;
+  /** Human-readable label (e.g., "div.card" or "span#title") */
+  label: string;
+  /** Text content preview (first ~40 chars of direct text) */
+  textPreview?: string;
+  /** Number of child elements */
+  childCount: number;
+}
+
+export interface BreadcrumbItem {
+  /** Selector to navigate to this element */
+  selector: string;
+  /** Human-readable label */
+  label: string;
 }
 
 export interface ComputedStylesSnapshot {
@@ -114,6 +153,15 @@ export enum MessageType {
 
   // Visualization
   TOGGLE_SPACING_VISUALIZATION = 'TOGGLE_SPACING_VISUALIZATION',
+
+  // Text content
+  TEXT_CONTENT_CHANGED = 'TEXT_CONTENT_CHANGED',
+
+  // Hierarchy navigation
+  NAVIGATE_TO_PARENT = 'NAVIGATE_TO_PARENT',
+  NAVIGATE_TO_CHILD = 'NAVIGATE_TO_CHILD',
+  NAVIGATE_TO_SELECTOR = 'NAVIGATE_TO_SELECTOR',
+  NAVIGATE_TO_SIBLING = 'NAVIGATE_TO_SIBLING',
 
   // Connection
   PING = 'PING',
@@ -228,6 +276,44 @@ export interface ToggleSpacingVisualizationMessage extends BaseMessage {
   };
 }
 
+export interface TextContentChangedMessage extends BaseMessage {
+  type: MessageType.TEXT_CONTENT_CHANGED;
+  payload: {
+    selector: string;
+    previousText: string;
+    newText: string;
+  };
+}
+
+// Navigation messages
+export interface NavigateToParentMessage extends BaseMessage {
+  type: MessageType.NAVIGATE_TO_PARENT;
+}
+
+export interface NavigateToChildMessage extends BaseMessage {
+  type: MessageType.NAVIGATE_TO_CHILD;
+  payload: {
+    /** Index of the child to navigate to (0-based) */
+    index: number;
+  };
+}
+
+export interface NavigateToSelectorMessage extends BaseMessage {
+  type: MessageType.NAVIGATE_TO_SELECTOR;
+  payload: {
+    /** CSS selector of the element to navigate to */
+    selector: string;
+  };
+}
+
+export interface NavigateToSiblingMessage extends BaseMessage {
+  type: MessageType.NAVIGATE_TO_SIBLING;
+  payload: {
+    /** Direction to navigate */
+    direction: 'prev' | 'next';
+  };
+}
+
 // Union type of all messages
 export type ExtensionMessage =
   | StartPickMessage
@@ -246,7 +332,12 @@ export type ExtensionMessage =
   | CurrentStateMessage
   | PingMessage
   | PongMessage
-  | ToggleSpacingVisualizationMessage;
+  | ToggleSpacingVisualizationMessage
+  | TextContentChangedMessage
+  | NavigateToParentMessage
+  | NavigateToChildMessage
+  | NavigateToSelectorMessage
+  | NavigateToSiblingMessage;
 
 // ============================================================================
 // Utility Functions

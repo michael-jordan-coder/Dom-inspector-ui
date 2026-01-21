@@ -23,6 +23,10 @@ import {
   showSelectedOverlay,
   hideSelectedOverlay,
   updateSelectedOverlay,
+  isTextEditable,
+  showTextEditor,
+  hideTextEditor,
+  isTextEditingActive,
 } from './overlay';
 import {
   applyStylePatch,
@@ -37,6 +41,12 @@ import {
   canUndo,
   canRedo,
 } from './history';
+import {
+  extractHierarchy,
+  getNavigableParent,
+  getChildAtIndex,
+  getSibling,
+} from './hierarchy';
 
 // ============================================================================
 // State
@@ -61,7 +71,7 @@ const state: ContentScriptState = {
 // Element Metadata Extraction
 // ============================================================================
 
-function extractElementMetadata(element: Element): ElementMetadata {
+function extractElementMetadata(element: Element, includeHierarchy = true): ElementMetadata {
   const rect = element.getBoundingClientRect();
   const computedStyles = getComputedStylesSnapshot(element);
 
@@ -78,7 +88,7 @@ function extractElementMetadata(element: Element): ElementMetadata {
     textPreview = textPreview.substring(0, 57) + '...';
   }
 
-  return {
+  const metadata: ElementMetadata = {
     tagName: element.tagName.toLowerCase(),
     id: element.id || null,
     classList: Array.from(element.classList).slice(0, 5), // Limit to 5 classes
@@ -94,6 +104,13 @@ function extractElementMetadata(element: Element): ElementMetadata {
     },
     computedStyles,
   };
+
+  // Include hierarchy information for navigation
+  if (includeHierarchy) {
+    metadata.hierarchy = extractHierarchy(element);
+  }
+
+  return metadata;
 }
 
 // ============================================================================
@@ -135,6 +152,121 @@ function handleClick(e: MouseEvent): void {
   // User must press Esc or use UI toggle to exit picking mode
 }
 
+function handleDoubleClick(e: MouseEvent): void {
+  // Only works in picker mode
+  if (!state.isPickerActive) return;
+  
+  handleDoubleClickEdit(e);
+}
+
+/**
+ * Handle double-click for inline text editing (works with or without picker).
+ */
+function handleDoubleClickEdit(e: MouseEvent): void {
+  // Skip if text editing is already active
+  if (isTextEditingActive()) return;
+
+  const target = e.target as Element;
+  
+  // Skip our own overlay elements
+  if (target.id?.startsWith('__ui_inspector')) return;
+
+  // Check if we have a selected element and the double-click is on it
+  // or if the target itself is text-editable (during picker mode)
+  let elementToEdit: Element | null = null;
+  
+  if (state.selectedElement && state.selectedElement.contains(target as Node)) {
+    elementToEdit = state.selectedElement;
+  } else if (state.isPickerActive) {
+    elementToEdit = target;
+  }
+  
+  if (!elementToEdit) return;
+
+  // Only allow text editing on appropriate elements
+  if (!isTextEditable(elementToEdit)) return;
+
+  // Prevent default text selection
+  e.preventDefault();
+  e.stopPropagation();
+
+  // Show inline text editor
+  showTextEditor(elementToEdit, (newText) => {
+    if (newText !== null && elementToEdit) {
+      // Apply text change
+      applyTextContent(elementToEdit, newText);
+    }
+  });
+}
+
+/**
+ * Global double-click handler for selected elements (works without picker mode).
+ */
+function handleGlobalDoubleClick(e: MouseEvent): void {
+  // Skip if picker is active (picker has its own handler)
+  if (state.isPickerActive) return;
+  
+  // Only proceed if we have a selected element
+  if (!state.selectedElement) return;
+  
+  handleDoubleClickEdit(e);
+}
+
+/**
+ * Apply new text content to an element.
+ */
+function applyTextContent(element: Element, newText: string): void {
+  // Store original for potential undo
+  const originalText = element.textContent || '';
+  
+  // Find and update direct text nodes, or set textContent if simple
+  const textNodes = Array.from(element.childNodes).filter(
+    node => node.nodeType === Node.TEXT_NODE && node.textContent?.trim()
+  );
+  
+  if (textNodes.length === 1) {
+    // Simple case: single text node
+    textNodes[0].textContent = newText;
+  } else if (textNodes.length === 0 && element.childNodes.length === 0) {
+    // Empty element: just set textContent
+    element.textContent = newText;
+  } else {
+    // Complex case: element has mixed content
+    // Replace first meaningful text node or prepend
+    const firstTextNode = textNodes[0];
+    if (firstTextNode) {
+      firstTextNode.textContent = newText;
+    } else {
+      // Prepend text node
+      element.insertBefore(document.createTextNode(newText), element.firstChild);
+    }
+  }
+  
+  // Update selected overlay (element size may have changed)
+  if (state.selectedElement === element) {
+    updateSelectedOverlay(element);
+  }
+  
+  // Send notification about text change
+  sendMessage(createMessage<import('../shared/types').TextContentChangedMessage>(
+    MessageType.TEXT_CONTENT_CHANGED,
+    {
+      selector: state.selectedSelector || getStableSelector(element),
+      previousText: originalText,
+      newText,
+    }
+  ));
+  
+  // Re-extract and send updated metadata
+  if (state.selectedElement) {
+    const metadata = extractElementMetadata(state.selectedElement);
+    sendMessage(createMessage<import('../shared/types').ElementSelectedMessage>(
+      MessageType.ELEMENT_SELECTED,
+      metadata
+    ));
+  }
+}
+
 function handleKeyDown(e: KeyboardEvent): void {
   if (!state.isPickerActive) return;
 
@@ -157,6 +289,7 @@ function startPicker(): void {
   // Add event listeners with capture to get events before page
   document.addEventListener('mousemove', handleMouseMove, true);
   document.addEventListener('click', handleClick, true);
+  document.addEventListener('dblclick', handleDoubleClick, true);
   document.addEventListener('keydown', handleKeyDown, true);
 
   // Add cursor style
@@ -172,10 +305,12 @@ function stopPicker(): void {
   // Remove event listeners
   document.removeEventListener('mousemove', handleMouseMove, true);
   document.removeEventListener('click', handleClick, true);
+  document.removeEventListener('dblclick', handleDoubleClick, true);
   document.removeEventListener('keydown', handleKeyDown, true);
 
-  // Hide hover overlay
+  // Hide overlays
   hideHoverOverlay();
+  hideTextEditor();
 
   // Restore cursor
   document.body.style.cursor = '';
@@ -418,6 +553,73 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendRe
       sendResponse({ type: MessageType.PONG });
       break;
 
+    // ========================================================================
+    // Hierarchy Navigation
+    // ========================================================================
+
+    case MessageType.NAVIGATE_TO_PARENT:
+      {
+        if (!state.selectedElement) {
+          sendResponse({ success: false, error: 'No element selected' });
+          break;
+        }
+        const parent = getNavigableParent(state.selectedElement);
+        if (!parent) {
+          sendResponse({ success: false, error: 'No parent to navigate to' });
+          break;
+        }
+        selectElement(parent);
+        sendResponse({ success: true });
+      }
+      break;
+
+    case MessageType.NAVIGATE_TO_CHILD:
+      {
+        if (!state.selectedElement) {
+          sendResponse({ success: false, error: 'No element selected' });
+          break;
+        }
+        const { index } = message.payload;
+        const child = getChildAtIndex(state.selectedElement, index);
+        if (!child) {
+          sendResponse({ success: false, error: 'Child not found at index' });
+          break;
+        }
+        selectElement(child);
+        sendResponse({ success: true });
+      }
+      break;
+
+    case MessageType.NAVIGATE_TO_SELECTOR:
+      {
+        const { selector } = message.payload;
+        const element = findElementBySelector(selector);
+        if (!element) {
+          sendResponse({ success: false, error: 'Element not found' });
+          break;
+        }
+        selectElement(element);
+        sendResponse({ success: true });
+      }
+      break;
+
+    case MessageType.NAVIGATE_TO_SIBLING:
+      {
+        if (!state.selectedElement) {
+          sendResponse({ success: false, error: 'No element selected' });
+          break;
+        }
+        const { direction } = message.payload;
+        const sibling = getSibling(state.selectedElement, direction);
+        if (!sibling) {
+          sendResponse({ success: false, error: `No ${direction} sibling` });
+          break;
+        }
+        selectElement(sibling);
+        sendResponse({ success: true });
+      }
+      break;
+
     default:
       return false;
   }
@@ -433,6 +635,9 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendRe
 // Initialize overlay on script load
 try {
   initOverlay();
+  
+  // Add global double-click handler for inline text editing on selected elements
+  document.addEventListener('dblclick', handleGlobalDoubleClick, true);
 } catch (e) {
   throw e;
 }

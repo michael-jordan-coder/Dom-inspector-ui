@@ -1,9 +1,18 @@
 import React, { useState } from 'react';
 import type { ElementMetadata } from '../../shared/types';
 import { AppIcon } from '../primitives';
+import { ElementBreadcrumb } from './ElementBreadcrumb';
+import { ChildrenList } from './ChildrenList';
+import { spacing } from '../tokens';
 
-interface SelectedSummaryProps {
+export interface SelectedSummaryProps {
   element: ElementMetadata;
+  /** Navigate to element by selector */
+  onNavigateToSelector?: (selector: string) => void;
+  /** Navigate to parent element */
+  onNavigateToParent?: () => void;
+  /** Navigate to first child element */
+  onNavigateToChild?: () => void;
 }
 
 const styles: Record<string, React.CSSProperties> = {
@@ -117,10 +126,19 @@ const styles: Record<string, React.CSSProperties> = {
   },
 };
 
-export function SelectedSummary({ element }: SelectedSummaryProps): React.ReactElement {
+export function SelectedSummary({
+  element,
+  onNavigateToSelector,
+  onNavigateToParent,
+  onNavigateToChild,
+}: SelectedSummaryProps): React.ReactElement {
   const [copied, setCopied] = useState(false);
   const [isCopyHovered, setIsCopyHovered] = useState(false);
   const [isCopyFocused, setIsCopyFocused] = useState(false);
+
+  const hierarchy = element.hierarchy;
+  const canNavigateUp = hierarchy?.parent !== null;
+  const canNavigateDown = (hierarchy?.children.length ?? 0) > 0;
 
   const handleCopy = async () => {
     try {
@@ -189,6 +207,30 @@ export function SelectedSummary({ element }: SelectedSummaryProps): React.ReactE
             )}
           </button>
         </div>
+
+        {/* Hierarchy Breadcrumb */}
+        {hierarchy && hierarchy.breadcrumb.length > 0 && onNavigateToSelector && (
+          <div style={{ marginTop: spacing[2] }}>
+            <ElementBreadcrumb
+              breadcrumb={hierarchy.breadcrumb}
+              onSelect={onNavigateToSelector}
+              onNavigateUp={onNavigateToParent ?? (() => {})}
+              onNavigateDown={onNavigateToChild ?? (() => {})}
+              canNavigateUp={canNavigateUp}
+              canNavigateDown={canNavigateDown}
+            />
+          </div>
+        )}
+
+        {/* Children List */}
+        {hierarchy && hierarchy.children.length > 0 && onNavigateToSelector && (
+          <div style={{ marginTop: spacing[2] }}>
+            <ChildrenList
+              children={hierarchy.children}
+              onSelect={onNavigateToSelector}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

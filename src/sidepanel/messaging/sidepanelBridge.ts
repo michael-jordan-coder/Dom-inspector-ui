@@ -253,3 +253,76 @@ export async function toggleSpacingVisualization(enabled: boolean): Promise<void
     throw e;
   }
 }
+
+// ============================================================================
+// Hierarchy Navigation
+// ============================================================================
+
+/**
+ * Navigate to parent element.
+ */
+export async function navigateToParent(): Promise<boolean> {
+  try {
+    const result = await sendMessage<{ success: boolean }>(
+      createMessage(MessageType.NAVIGATE_TO_PARENT)
+    );
+    return result.success;
+  } catch (e) {
+    callbacks.onError?.(String(e));
+    return false;
+  }
+}
+
+/**
+ * Navigate to child element at index.
+ */
+export async function navigateToChild(index: number = 0): Promise<boolean> {
+  try {
+    const result = await sendMessage<{ success: boolean }>(
+      createMessage<import('../../shared/types').NavigateToChildMessage>(
+        MessageType.NAVIGATE_TO_CHILD,
+        { index }
+      )
+    );
+    return result.success;
+  } catch (e) {
+    callbacks.onError?.(String(e));
+    return false;
+  }
+}
+
+/**
+ * Navigate to element by selector.
+ */
+export async function navigateToSelector(selector: string): Promise<boolean> {
+  try {
+    const result = await sendMessage<{ success: boolean }>(
+      createMessage<import('../../shared/types').NavigateToSelectorMessage>(
+        MessageType.NAVIGATE_TO_SELECTOR,
+        { selector }
+      )
+    );
+    return result.success;
+  } catch (e) {
+    callbacks.onError?.(String(e));
+    return false;
+  }
+}
+
+/**
+ * Navigate to sibling element.
+ */
+export async function navigateToSibling(direction: 'prev' | 'next'): Promise<boolean> {
+  try {
+    const result = await sendMessage<{ success: boolean }>(
+      createMessage<import('../../shared/types').NavigateToSiblingMessage>(
+        MessageType.NAVIGATE_TO_SIBLING,
+        { direction }
+      )
+    );
+    return result.success;
+  } catch (e) {
+    callbacks.onError?.(String(e));
+    return false;
+  }
+}

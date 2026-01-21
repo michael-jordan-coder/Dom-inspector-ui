@@ -15,7 +15,9 @@ import {
     IconCheck,
     IconX,
     IconChevronDown,
+    IconChevronUp,
     IconChevronRight,
+    IconChevronLeft,
 
     // Layout & Flow
     IconLayoutRows,
@@ -84,7 +86,9 @@ export const ICONS = {
     check: IconCheck,
     close: IconX,
     chevronDown: IconChevronDown,
+    chevronUp: IconChevronUp,
     chevronRight: IconChevronRight,
+    chevronLeft: IconChevronLeft,
 
     // Layout Flow
     flowRow: IconLayoutColumns,

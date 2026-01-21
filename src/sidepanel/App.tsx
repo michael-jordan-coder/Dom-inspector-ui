@@ -8,6 +8,9 @@ import {
   undo,
   redo,
   applyStylePatch,
+  navigateToParent,
+  navigateToChild,
+  navigateToSibling,
 } from './messaging/sidepanelBridge';
 import { InspectorHeader } from './components/InspectorHeader';
 import { InspectorSidebar } from './InspectorSidebar';
@@ -350,11 +353,58 @@ export function App(): React.ReactElement {
           }
         }
       }
+
+      // Alt + Arrow keys: Hierarchy navigation (when element is selected and not typing)
+      if (e.altKey && !isTyping && selectedElement) {
+        // Alt + ↑: Navigate to parent
+        if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          try {
+            await navigateToParent();
+          } catch (err) {
+            console.error('Navigate to parent failed:', err);
+          }
+          return;
+        }
+
+        // Alt + ↓: Navigate to first child
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          try {
+            await navigateToChild(0);
+          } catch (err) {
+            console.error('Navigate to child failed:', err);
+          }
+          return;
+        }
+
+        // Alt + ←: Navigate to previous sibling
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          try {
+            await navigateToSibling('prev');
+          } catch (err) {
+            console.error('Navigate to prev sibling failed:', err);
+          }
+          return;
+        }
+
+        // Alt + →: Navigate to next sibling
+        if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          try {
+            await navigateToSibling('next');
+          } catch (err) {
+            console.error('Navigate to next sibling failed:', err);
+          }
+          return;
+        }
+      }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [canUndo, canRedo, isPickerActive, commandPalette]);
+  }, [canUndo, canRedo, isPickerActive, commandPalette, selectedElement]);
 
   return (
     <div style={styles.container}>
