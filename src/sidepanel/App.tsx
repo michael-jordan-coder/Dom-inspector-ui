@@ -11,12 +11,18 @@ import {
   navigateToParent,
   navigateToChild,
   navigateToSibling,
+  getExportData,
 } from './messaging/sidepanelBridge';
 import { InspectorHeader } from './components/InspectorHeader';
 import { InspectorSidebar } from './InspectorSidebar';
 import { CommandPalette } from './components/CommandPalette';
 import { useCommandPalette, createDefaultCommands } from './hooks/useCommandPalette';
-import { colors, spacing } from './tokens';
+import { SegmentedTabs } from './primitives';
+import { AIPage } from './pages';
+import { colors, spacing, radii } from './tokens';
+
+// Page types for segment controller
+type PageType = 'inspector' | 'ai';
 
 // ============================================================================
 // Styles
@@ -33,6 +39,11 @@ const styles: Record<string, React.CSSProperties> = {
     width: '100%',
     maxWidth: '100%',
   },
+  tabBar: {
+    padding: `${spacing[2]} ${spacing[3]}`,
+    borderBottom: `1px solid ${colors.border}`,
+    backgroundColor: colors.bg,
+  },
   content: {
     flex: 1,
     overflowY: 'auto',
@@ -46,16 +57,41 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing[3],
+    gap: spacing[4],
     padding: spacing[6],
     textAlign: 'center',
     color: colors.textMuted,
     flex: 1,
   },
   emptyIcon: {
-    width: 48,
-    height: 48,
-    opacity: 0.5,
+    width: 56,
+    height: 56,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radii.lg,
+    backgroundColor: colors.surfaceRaised,
+    opacity: 0.8,
+  },
+  emptyTitle: {
+    fontSize: '16px',
+    fontWeight: 600,
+    color: colors.text,
+    margin: 0,
+  },
+  emptyDescription: {
+    fontSize: '13px',
+    color: colors.textMuted,
+    maxWidth: 240,
+    lineHeight: 1.5,
+    margin: 0,
+  },
+  emptyAction: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: spacing[2],
+    marginTop: spacing[2],
   },
   toast: {
     position: 'fixed',
@@ -128,17 +164,29 @@ function generateCSSFromStyles(selector: string, styles: ComputedStylesSnapshot)
 
 export function App(): React.ReactElement {
   // State
+  const [activePage, setActivePage] = useState<PageType>('inspector');
   const [isPickerActive, setIsPickerActive] = useState(false);
   const [selectedElement, setSelectedElement] = useState<ElementMetadata | null>(null);
   const [computedStyles, setComputedStyles] = useState<ComputedStylesSnapshot | null>(null);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+  const [patchCount, setPatchCount] = useState(0);
   const [toast, setToast] = useState<{ message: string; isError: boolean } | null>(null);
 
   // Show toast message
   const showToast = useCallback((message: string, isError = false) => {
     setToast({ message, isError });
     setTimeout(() => setToast(null), 3000);
+  }, []);
+
+  // Refresh patch count for AI page badge
+  const refreshPatchCount = useCallback(async () => {
+    try {
+      const result = await getExportData();
+      setPatchCount(result.patchCount || 0);
+    } catch {
+      // Ignore errors
+    }
   }, []);
 
   // Initialize bridge on mount
@@ -156,6 +204,8 @@ export function App(): React.ReactElement {
         setComputedStyles(styles);
         setCanUndo(true);
         setCanRedo(false);
+        // Refresh patch count
+        refreshPatchCount();
       },
       onUndoApplied: (result) => {
         if (result.updatedStyles) {
@@ -201,12 +251,14 @@ export function App(): React.ReactElement {
       setComputedStyles(state.selectedElement?.computedStyles || null);
       setCanUndo(state.canUndo);
       setCanRedo(state.canRedo);
+      // Also refresh patch count
+      refreshPatchCount();
     } catch {
       // Content script not available
       setSelectedElement(null);
       setComputedStyles(null);
     }
-  }, []);
+  }, [refreshPatchCount]);
 
   // Handle picker toggle
   const handlePickerToggle = useCallback(async () => {
@@ -406,6 +458,12 @@ export function App(): React.ReactElement {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [canUndo, canRedo, isPickerActive, commandPalette, selectedElement]);
 
+  // Tab options for segment controller
+  const tabOptions = useMemo(() => [
+    { value: 'inspector' as const, label: 'Inspector' },
+    { value: 'ai' as const, label: 'AI', badge: patchCount > 0 ? patchCount : undefined },
+  ], [patchCount]);
+
   return (
     <div style={styles.container}>
       <InspectorHeader
@@ -415,35 +473,64 @@ export function App(): React.ReactElement {
         onCopyCSS={handleCopyCSS}
       />
 
+      {/* Page Tab Switcher */}
+      <div style={styles.tabBar}>
+        <SegmentedTabs
+          options={tabOptions}
+          value={activePage}
+          onChange={setActivePage}
+        />
+      </div>
+
       <div style={styles.content}>
-        {selectedElement && computedStyles ? (
-          <InspectorSidebar
-            element={selectedElement}
-            styles={computedStyles}
-            canUndo={canUndo}
-            canRedo={canRedo}
-          />
-        ) : (
-          <div style={styles.emptyState}>
-            <svg
-              style={styles.emptyIcon}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={1.5}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672zM12 2.25V4.5m5.834.166l-1.591 1.591M20.25 10.5H18M7.757 14.743l-1.59 1.59M6 10.5H3.75m4.007-4.243l-1.59-1.59"
+        {/* Inspector Page */}
+        {activePage === 'inspector' && (
+          <>
+            {selectedElement && computedStyles ? (
+              <InspectorSidebar
+                element={selectedElement}
+                styles={computedStyles}
+                canUndo={canUndo}
+                canRedo={canRedo}
               />
-            </svg>
-            <p>
-              {isPickerActive
-                ? 'Click on any element to inspect it'
-                : 'Click "Pick Element" to start inspecting'}
-            </p>
-          </div>
+            ) : (
+              <div style={styles.emptyState}>
+                <div style={styles.emptyIcon}>
+                  <svg
+                    width={28}
+                    height={28}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={1.5}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672zM12 2.25V4.5m5.834.166l-1.591 1.591M20.25 10.5H18M7.757 14.743l-1.59 1.59M6 10.5H3.75m4.007-4.243l-1.59-1.59"
+                    />
+                  </svg>
+                </div>
+                <h3 style={styles.emptyTitle}>
+                  {isPickerActive ? 'Select an Element' : 'Pick Element'}
+                </h3>
+                <p style={styles.emptyDescription}>
+                  {isPickerActive
+                    ? 'Click on any element in the page to inspect and edit its styles.'
+                    : 'Click the "Pick Element" button to start selecting elements.'}
+                </p>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* AI Page */}
+        {activePage === 'ai' && (
+          <AIPage
+            hasChanges={patchCount > 0}
+            patchCount={patchCount}
+            onSwitchToInspector={() => setActivePage('inspector')}
+          />
         )}
       </div>
 

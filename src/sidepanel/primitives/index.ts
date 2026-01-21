@@ -10,6 +10,7 @@ export { Row } from './Row';
 export { Divider } from './Divider';
 export { IconButton } from './IconButton';
 export { Segmented } from './Segmented';
+export { SegmentedTabs } from './SegmentedTabs';
 export { NumberField } from './NumberField';
 export { Toggle } from './Toggle';
 export { ColorField } from './ColorField';

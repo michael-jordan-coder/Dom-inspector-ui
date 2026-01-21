@@ -11,7 +11,7 @@ import {
   applyStylePatch,
 } from './messaging/sidepanelBridge';
 import { Divider } from './primitives';
-import { AppearanceSection, LayoutSection, TypographySection, EffectsSection, HistorySection, ChangesSection, HandoffSection, AISection } from './sections';
+import { AppearanceSection, LayoutSection, TypographySection, EffectsSection, HistorySection, ChangesSection, HandoffSection } from './sections';
 import { SelectedSummary } from './components/SelectedSummary';
 import { spacing } from './tokens';
 import { getDefaultColorTokens } from './features/color';
@@ -114,12 +114,6 @@ export function InspectorSidebar({
       <Divider margin={spacing[1]} />
 
       <HandoffSection
-        refreshTrigger={refreshTrigger}
-      />
-
-      <Divider margin={spacing[1]} />
-
-      <AISection
         refreshTrigger={refreshTrigger}
       />
     </div>
