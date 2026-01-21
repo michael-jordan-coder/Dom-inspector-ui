@@ -5,8 +5,9 @@
  * Uses inline styles for MVP (most reliable for overriding existing styles).
  */
 
-import type { ComputedStylesSnapshot, StylePatch } from '../shared/types';
+import type { ComputedStylesSnapshot, StylePatch, PatchError, ElementIdentity } from '../shared/types';
 import { findElementBySelector } from '../shared/selector';
+import { computeIdentity, identitiesMatch } from '../shared/identity';
 
 /**
  * Map of CSS property names (camelCase to kebab-case).
@@ -37,17 +38,54 @@ function toKebabCase(property: string): string {
 /**
  * Apply a style patch to the DOM.
  * Returns the actual previous value (from computed styles).
+ * Now includes identity validation to prevent applying to wrong element.
  */
 export function applyStylePatch(
   selector: string,
   property: string,
-  value: string
-): { success: boolean; previousValue: string } {
-  const element = findElementBySelector(selector);
+  value: string,
+  expectedIdentity?: ElementIdentity
+): { success: boolean; previousValue: string; error?: PatchError } {
+  const resolution = findElementBySelector(selector);
+
+  // Validate selector resolution
+  if (resolution.status !== 'OK') {
+    const errorCode: PatchError['code'] =
+      resolution.status === 'NOT_FOUND' ? 'ELEMENT_NOT_FOUND' :
+        resolution.status === 'AMBIGUOUS' ? 'ELEMENT_AMBIGUOUS' :
+          'INVALID_SELECTOR';
+
+    return {
+      success: false,
+      previousValue: '',
+      error: {
+        code: errorCode,
+        message: resolution.error || 'Unknown error',
+        matchCount: resolution.matchCount
+      }
+    };
+  }
+
+  const element = resolution.element;
 
   if (!element || !(element instanceof HTMLElement)) {
-    console.warn(`[UI Inspector] Element not found for selector: ${selector}`);
+    console.warn(`[UI Inspector] Element is not an HTMLElement`);
     return { success: false, previousValue: '' };
+  }
+
+  // Validate identity if provided
+  if (expectedIdentity) {
+    const currentIdentity = computeIdentity(element);
+    if (!identitiesMatch(currentIdentity, expectedIdentity)) {
+      return {
+        success: false,
+        previousValue: '',
+        error: {
+          code: 'IDENTITY_MISMATCH',
+          message: 'Element has changed since patch was created (text, classes, or parent changed)'
+        }
+      };
+    }
   }
 
   // Get the current computed value before applying
@@ -62,13 +100,49 @@ export function applyStylePatch(
 
 /**
  * Revert a style patch by applying the previous value.
+ * Now includes identity validation.
  */
-export function revertStylePatch(patch: StylePatch): boolean {
-  const element = findElementBySelector(patch.selector);
+export function revertStylePatch(
+  patch: StylePatch
+): { success: boolean; error?: PatchError } {
+  const resolution = findElementBySelector(patch.selector);
+
+  // Validate selector resolution
+  if (resolution.status !== 'OK') {
+    const errorCode: PatchError['code'] =
+      resolution.status === 'NOT_FOUND' ? 'ELEMENT_NOT_FOUND' :
+        resolution.status === 'AMBIGUOUS' ? 'ELEMENT_AMBIGUOUS' :
+          'INVALID_SELECTOR';
+
+    return {
+      success: false,
+      error: {
+        code: errorCode,
+        message: resolution.error || 'Unknown error',
+        matchCount: resolution.matchCount
+      }
+    };
+  }
+
+  const element = resolution.element;
 
   if (!element || !(element instanceof HTMLElement)) {
-    console.warn(`[UI Inspector] Element not found for selector: ${patch.selector}`);
-    return false;
+    console.warn(`[UI Inspector] Element is not an HTMLElement`);
+    return { success: false };
+  }
+
+  // Validate identity if available in patch
+  if (patch.identityToken) {
+    const currentIdentity = computeIdentity(element);
+    if (!identitiesMatch(currentIdentity, patch.identityToken)) {
+      return {
+        success: false,
+        error: {
+          code: 'IDENTITY_MISMATCH',
+          message: 'Element has changed since patch was created'
+        }
+      };
+    }
   }
 
   const kebabProperty = toKebabCase(String(patch.property));
@@ -81,15 +155,26 @@ export function revertStylePatch(patch: StylePatch): boolean {
     element.style.setProperty(kebabProperty, patch.previousValue, 'important');
   }
 
-  return true;
+  return { success: true };
 }
 
 /**
  * Re-apply a style patch (for redo).
+ * Now includes identity validation.
  */
-export function reapplyStylePatch(patch: StylePatch): boolean {
-  const result = applyStylePatch(patch.selector, String(patch.property), patch.value);
-  return result.success;
+export function reapplyStylePatch(
+  patch: StylePatch
+): { success: boolean; error?: PatchError } {
+  const result = applyStylePatch(
+    patch.selector,
+    String(patch.property),
+    patch.value,
+    patch.identityToken  // Pass identity token for validation
+  );
+  return {
+    success: result.success,
+    error: result.error
+  };
 }
 
 /**
@@ -161,9 +246,9 @@ export function getComputedStylesSnapshot(element: Element): ComputedStylesSnaps
  * Get computed styles for a selector (convenience function).
  */
 export function getComputedStylesForSelector(selector: string): ComputedStylesSnapshot | null {
-  const element = findElementBySelector(selector);
-  if (!element) {
+  const resolution = findElementBySelector(selector);
+  if (resolution.status !== 'OK' || !resolution.element) {
     return null;
   }
-  return getComputedStylesSnapshot(element);
+  return getComputedStylesSnapshot(resolution.element);
 }

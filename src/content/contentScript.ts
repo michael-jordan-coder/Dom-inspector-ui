@@ -16,6 +16,7 @@ import type {
 } from '../shared/types';
 import { MessageType, createMessage } from '../shared/types';
 import { getStableSelector, findElementBySelector } from '../shared/selector';
+import { computeIdentity } from '../shared/identity';
 import {
   initOverlay,
   showHoverOverlay,
@@ -155,7 +156,7 @@ function handleClick(e: MouseEvent): void {
 function handleDoubleClick(e: MouseEvent): void {
   // Only works in picker mode
   if (!state.isPickerActive) return;
-  
+
   handleDoubleClickEdit(e);
 }
 
@@ -167,20 +168,20 @@ function handleDoubleClickEdit(e: MouseEvent): void {
   if (isTextEditingActive()) return;
 
   const target = e.target as Element;
-  
+
   // Skip our own overlay elements
   if (target.id?.startsWith('__ui_inspector')) return;
 
   // Check if we have a selected element and the double-click is on it
   // or if the target itself is text-editable (during picker mode)
   let elementToEdit: Element | null = null;
-  
+
   if (state.selectedElement && state.selectedElement.contains(target as Node)) {
     elementToEdit = state.selectedElement;
   } else if (state.isPickerActive) {
     elementToEdit = target;
   }
-  
+
   if (!elementToEdit) return;
 
   // Only allow text editing on appropriate elements
@@ -205,10 +206,10 @@ function handleDoubleClickEdit(e: MouseEvent): void {
 function handleGlobalDoubleClick(e: MouseEvent): void {
   // Skip if picker is active (picker has its own handler)
   if (state.isPickerActive) return;
-  
+
   // Only proceed if we have a selected element
   if (!state.selectedElement) return;
-  
+
   handleDoubleClickEdit(e);
 }
 
@@ -218,12 +219,12 @@ function handleGlobalDoubleClick(e: MouseEvent): void {
 function applyTextContent(element: Element, newText: string): void {
   // Store original for potential undo
   const originalText = element.textContent || '';
-  
+
   // Find and update direct text nodes, or set textContent if simple
   const textNodes = Array.from(element.childNodes).filter(
     node => node.nodeType === Node.TEXT_NODE && node.textContent?.trim()
   );
-  
+
   if (textNodes.length === 1) {
     // Simple case: single text node
     textNodes[0].textContent = newText;
@@ -241,12 +242,12 @@ function applyTextContent(element: Element, newText: string): void {
       element.insertBefore(document.createTextNode(newText), element.firstChild);
     }
   }
-  
+
   // Update selected overlay (element size may have changed)
   if (state.selectedElement === element) {
     updateSelectedOverlay(element);
   }
-  
+
   // Send notification about text change
   sendMessage(createMessage<import('../shared/types').TextContentChangedMessage>(
     MessageType.TEXT_CONTENT_CHANGED,
@@ -256,7 +257,7 @@ function applyTextContent(element: Element, newText: string): void {
       newText,
     }
   ));
-  
+
   // Re-extract and send updated metadata
   if (state.selectedElement) {
     const metadata = extractElementMetadata(state.selectedElement);
@@ -342,7 +343,14 @@ function handleApplyStylePatch(
   value: string,
   previousValue: string
 ): { success: boolean; patch: StylePatch; updatedStyles: ComputedStylesSnapshot | null } {
-  const result = applyStylePatch(selector, property, value);
+  // First resolve the element to compute its identity
+  const resolution = findElementBySelector(selector);
+  const identityToken = resolution.status === 'OK' && resolution.element
+    ? computeIdentity(resolution.element)
+    : undefined;
+
+  // Apply the patch with identity validation
+  const result = applyStylePatch(selector, property, value, identityToken);
 
   const patch: StylePatch = {
     selector,
@@ -350,6 +358,7 @@ function handleApplyStylePatch(
     value,
     previousValue: result.previousValue || previousValue,
     timestamp: Date.now(),
+    identityToken  // Store for future undo/redo validation
   };
 
   if (result.success) {
@@ -357,16 +366,16 @@ function handleApplyStylePatch(
     pushPatch(patch);
 
     // Update selected overlay position (element might have moved)
-    const element = findElementBySelector(selector);
-    if (element) {
-      updateSelectedOverlay(element);
-      const updatedStyles = getComputedStylesSnapshot(element);
+    if (resolution.status === 'OK' && resolution.element) {
+      updateSelectedOverlay(resolution.element);
+      const updatedStyles = getComputedStylesSnapshot(resolution.element);
       return { success: true, patch, updatedStyles };
     }
   }
 
   return { success: result.success, patch, updatedStyles: null };
 }
+
 
 function handleUndo(): {
   success: boolean;
@@ -387,19 +396,21 @@ function handleUndo(): {
     };
   }
 
-  const success = revertStylePatch(patch);
+  const result = revertStylePatch(patch);
 
   // Get updated styles
-  const element = findElementBySelector(patch.selector);
-  const updatedStyles = element ? getComputedStylesSnapshot(element) : null;
+  const resolution = findElementBySelector(patch.selector);
+  const updatedStyles = (resolution.status === 'OK' && resolution.element)
+    ? getComputedStylesSnapshot(resolution.element)
+    : null;
 
   // Update overlay
-  if (element) {
-    updateSelectedOverlay(element);
+  if (resolution.status === 'OK' && resolution.element) {
+    updateSelectedOverlay(resolution.element);
   }
 
   return {
-    success,
+    success: result.success,
     patch,
     updatedStyles,
     canUndo: canUndo(),
@@ -426,19 +437,21 @@ function handleRedo(): {
     };
   }
 
-  const success = reapplyStylePatch(patch);
+  const result = reapplyStylePatch(patch);
 
   // Get updated styles
-  const element = findElementBySelector(patch.selector);
-  const updatedStyles = element ? getComputedStylesSnapshot(element) : null;
+  const resolution = findElementBySelector(patch.selector);
+  const updatedStyles = (resolution.status === 'OK' && resolution.element)
+    ? getComputedStylesSnapshot(resolution.element)
+    : null;
 
   // Update overlay
-  if (element) {
-    updateSelectedOverlay(element);
+  if (resolution.status === 'OK' && resolution.element) {
+    updateSelectedOverlay(resolution.element);
   }
 
   return {
-    success,
+    success: result.success,
     patch,
     updatedStyles,
     canUndo: canUndo(),
@@ -525,10 +538,10 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendRe
           selectedMetadata = extractElementMetadata(state.selectedElement);
         } else if (state.selectedSelector) {
           // Try to find by selector if element reference is stale
-          const element = findElementBySelector(state.selectedSelector);
-          if (element) {
-            state.selectedElement = element;
-            selectedMetadata = extractElementMetadata(element);
+          const resolution = findElementBySelector(state.selectedSelector);
+          if (resolution.status === 'OK' && resolution.element) {
+            state.selectedElement = resolution.element;
+            selectedMetadata = extractElementMetadata(resolution.element);
           }
         }
 
@@ -593,15 +606,16 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendRe
     case MessageType.NAVIGATE_TO_SELECTOR:
       {
         const { selector } = message.payload;
-        const element = findElementBySelector(selector);
-        if (!element) {
-          sendResponse({ success: false, error: 'Element not found' });
+        const resolution = findElementBySelector(selector);
+        if (resolution.status !== 'OK' || !resolution.element) {
+          sendResponse({ success: false, error: resolution.error || 'Element not found' });
           break;
         }
-        selectElement(element);
+        selectElement(resolution.element);
         sendResponse({ success: true });
       }
       break;
+
 
     case MessageType.NAVIGATE_TO_SIBLING:
       {
@@ -635,7 +649,7 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendRe
 // Initialize overlay on script load
 try {
   initOverlay();
-  
+
   // Add global double-click handler for inline text editing on selected elements
   document.addEventListener('dblclick', handleGlobalDoubleClick, true);
 } catch (e) {

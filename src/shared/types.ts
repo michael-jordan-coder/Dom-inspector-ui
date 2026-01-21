@@ -108,6 +108,34 @@ export interface ComputedStylesSnapshot {
 }
 
 // ============================================================================
+// Selector Resolution
+// ============================================================================
+
+export type SelectorResolutionStatus =
+  | 'OK'
+  | 'NOT_FOUND'
+  | 'AMBIGUOUS'
+  | 'INVALID_SELECTOR';
+
+export interface SelectorResolutionResult {
+  status: SelectorResolutionStatus;
+  element: Element | null;
+  matchCount?: number; // For AMBIGUOUS status
+  error?: string; // Human-readable error message
+}
+
+// ============================================================================
+// Element Identity
+// ============================================================================
+
+export interface ElementIdentity {
+  tagName: string;
+  textPreview: string; // First 50 chars of text content
+  classList: string;   // Sorted class list as string
+  parentTag: string;   // Parent element tag name
+}
+
+// ============================================================================
 // Style Patch
 // ============================================================================
 
@@ -117,7 +145,25 @@ export interface StylePatch {
   value: string;
   previousValue: string;
   timestamp: number;
+  identityToken?: ElementIdentity; // Optional for backwards compat
 }
+
+// ============================================================================
+// Patch Errors
+// ============================================================================
+
+export type PatchErrorCode =
+  | 'ELEMENT_NOT_FOUND'
+  | 'ELEMENT_AMBIGUOUS'
+  | 'IDENTITY_MISMATCH'
+  | 'INVALID_SELECTOR';
+
+export interface PatchError {
+  code: PatchErrorCode;
+  message: string;
+  matchCount?: number;
+}
+
 
 // ============================================================================
 // Messages
