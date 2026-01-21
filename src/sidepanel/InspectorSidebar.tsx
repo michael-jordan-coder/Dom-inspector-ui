@@ -9,9 +9,6 @@ import React, { useCallback, useMemo } from 'react';
 import type { ComputedStylesSnapshot, ElementMetadata } from '../shared/types';
 import {
   applyStylePatch,
-  navigateToSelector,
-  navigateToParent,
-  navigateToChild,
 } from './messaging/sidepanelBridge';
 import { Divider } from './primitives';
 import { AppearanceSection, LayoutSection, TypographySection, EffectsSection, HistorySection } from './sections';
@@ -63,26 +60,11 @@ export function InspectorSidebar({
   // Get default color tokens for the color picker
   const colorTokens = useMemo(() => getDefaultColorTokens(), []);
 
-  // Navigation handlers
-  const handleNavigateToSelector = useCallback(async (selector: string) => {
-    await navigateToSelector(selector);
-  }, []);
-
-  const handleNavigateToParent = useCallback(async () => {
-    await navigateToParent();
-  }, []);
-
-  const handleNavigateToChild = useCallback(async () => {
-    await navigateToChild(0);
-  }, []);
 
   return (
     <div style={containerStyles}>
       <SelectedSummary
         element={element}
-        onNavigateToSelector={handleNavigateToSelector}
-        onNavigateToParent={handleNavigateToParent}
-        onNavigateToChild={handleNavigateToChild}
       />
 
       <Divider margin={spacing[1]} />
