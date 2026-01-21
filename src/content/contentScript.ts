@@ -121,9 +121,26 @@ function extractElementMetadata(element: Element, includeHierarchy = true): Elem
 // Picker Mode Handlers
 // ============================================================================
 
+let mouseMoveRafId: number | null = null;
+let lastMouseEvent: MouseEvent | null = null;
+
 function handleMouseMove(e: MouseEvent): void {
   if (!state.isPickerActive) return;
 
+  lastMouseEvent = e;
+
+  if (mouseMoveRafId === null) {
+    mouseMoveRafId = requestAnimationFrame(() => {
+      if (lastMouseEvent) {
+        processMouseMove(lastMouseEvent);
+      }
+      mouseMoveRafId = null;
+      lastMouseEvent = null;
+    });
+  }
+}
+
+function processMouseMove(e: MouseEvent): void {
   const target = e.target as Element;
 
   // Skip our own overlay elements
@@ -732,16 +749,17 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // Handle scroll to update overlay positions
-let scrollTimeout: number | undefined;
+let scrollRafId: number | null = null;
+
 window.addEventListener('scroll', () => {
-  if (scrollTimeout) {
-    clearTimeout(scrollTimeout);
+  if (scrollRafId === null) {
+    scrollRafId = requestAnimationFrame(() => {
+      if (state.selectedElement && document.contains(state.selectedElement)) {
+        updateSelectedOverlay(state.selectedElement);
+      }
+      scrollRafId = null;
+    });
   }
-  scrollTimeout = window.setTimeout(() => {
-    if (state.selectedElement && document.contains(state.selectedElement)) {
-      updateSelectedOverlay(state.selectedElement);
-    }
-  }, 16) as unknown as number; // ~60fps
 }, { passive: true });
 
 console.log('[UI Inspector] Content script loaded');
