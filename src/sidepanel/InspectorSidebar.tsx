@@ -11,7 +11,7 @@ import {
   applyStylePatch,
 } from './messaging/sidepanelBridge';
 import { Divider } from './primitives';
-import { AppearanceSection, LayoutSection, TypographySection, EffectsSection, HistorySection } from './sections';
+import { AppearanceSection, LayoutSection, TypographySection, EffectsSection, HistorySection, ChangesSection } from './sections';
 import { SelectedSummary } from './components/SelectedSummary';
 import { spacing } from './tokens';
 import { getDefaultColorTokens } from './features/color';
@@ -44,12 +44,17 @@ export function InspectorSidebar({
   canUndo,
   canRedo,
 }: InspectorSidebarProps): React.ReactElement {
+  // Track style changes to refresh ChangesSection
+  const [refreshTrigger, setRefreshTrigger] = React.useState(0);
+
   const handlePatchApply = useCallback(
     async (property: string, value: string) => {
       try {
         const previousValue = styles[property as keyof ComputedStylesSnapshot];
         const prevString = typeof previousValue === 'string' ? previousValue : '';
         await applyStylePatch(element.selector, property, value, prevString);
+        // Trigger refresh of ChangesSection
+        setRefreshTrigger((prev) => prev + 1);
       } catch (e) {
         console.error('Failed to apply patch:', e);
       }
@@ -98,6 +103,12 @@ export function InspectorSidebar({
       <HistorySection
         canUndo={canUndo}
         canRedo={canRedo}
+      />
+
+      <Divider margin={spacing[1]} />
+
+      <ChangesSection
+        refreshTrigger={refreshTrigger}
       />
     </div>
   );

@@ -164,6 +164,50 @@ export interface PatchError {
   matchCount?: number;
 }
 
+// ============================================================================
+// Prompt Handoff Export
+// ============================================================================
+
+/**
+ * Stability signals for selector confidence.
+ * Helps the AI coding agent assess targeting reliability.
+ */
+export interface StabilitySignals {
+  /** Result of resolving the selector at export time */
+  selectorResolution: {
+    /** Resolution status: OK, NOT_FOUND, AMBIGUOUS, or INVALID_SELECTOR */
+    status: SelectorResolutionStatus;
+    /** Number of elements matching the selector */
+    matchCount: number;
+  };
+  /** Whether the current element identity matches the patch identity tokens */
+  identityMatch: boolean;
+  /** Whether the selector uses :nth-of-type (position-dependent, fragile) */
+  usesNthOfType: boolean;
+}
+
+/**
+ * Style patch with required identity token for handoff export.
+ * Enforces identity token presence for reliable targeting.
+ */
+export interface HandoffStylePatch extends Omit<StylePatch, 'identityToken'> {
+  /** Required identity token for element verification */
+  identityToken: ElementIdentity;
+}
+
+/**
+ * Complete export payload for Prompt Handoff.
+ * Contains all information needed for an AI coding agent to implement
+ * verified visual changes in source code.
+ */
+export interface PromptHandoffExport {
+  /** Target element with full DOM context */
+  selectedElement: ElementMetadata;
+  /** Visual changes with before/after values */
+  patches: HandoffStylePatch[];
+  /** Confidence signals for selector targeting */
+  stability: StabilitySignals;
+}
 
 // ============================================================================
 // Messages
@@ -212,6 +256,10 @@ export enum MessageType {
   // Connection
   PING = 'PING',
   PONG = 'PONG',
+
+  // Prompt Handoff Export
+  GET_EXPORT_DATA = 'GET_EXPORT_DATA',
+  EXPORT_DATA = 'EXPORT_DATA',
 }
 
 // Base message interface
@@ -360,6 +408,16 @@ export interface NavigateToSiblingMessage extends BaseMessage {
   };
 }
 
+// Prompt Handoff Export messages
+export interface GetExportDataMessage extends BaseMessage {
+  type: MessageType.GET_EXPORT_DATA;
+}
+
+export interface ExportDataMessage extends BaseMessage {
+  type: MessageType.EXPORT_DATA;
+  payload: PromptHandoffExport | null;
+}
+
 // Union type of all messages
 export type ExtensionMessage =
   | StartPickMessage
@@ -383,7 +441,9 @@ export type ExtensionMessage =
   | NavigateToParentMessage
   | NavigateToChildMessage
   | NavigateToSelectorMessage
-  | NavigateToSiblingMessage;
+  | NavigateToSiblingMessage
+  | GetExportDataMessage
+  | ExportDataMessage;
 
 // ============================================================================
 // Utility Functions

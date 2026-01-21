@@ -41,7 +41,10 @@ import {
   popRedo,
   canUndo,
   canRedo,
+  getAllPatches,
 } from './history';
+import { createHandoffExport } from '../shared/handoff';
+import type { PromptHandoffExport } from '../shared/types';
 import {
   extractHierarchy,
   getNavigableParent,
@@ -631,6 +634,53 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendRe
         }
         selectElement(sibling);
         sendResponse({ success: true });
+      }
+      break;
+
+    // ========================================================================
+    // Prompt Handoff Export
+    // ========================================================================
+
+    case MessageType.GET_EXPORT_DATA:
+      {
+        const patches = getAllPatches();
+        
+        // No patches = no export data
+        if (patches.length === 0 || !state.selectedElement) {
+          sendResponse({ exportData: null, patchCount: 0 });
+          break;
+        }
+
+        // Get current element metadata
+        const elementMetadata = extractElementMetadata(state.selectedElement);
+        
+        // Resolve selector to check stability
+        const resolution = findElementBySelector(elementMetadata.selector);
+        const selectorStatus = resolution.status;
+        const matchCount = resolution.matchCount ?? (resolution.status === 'OK' ? 1 : 0);
+        
+        // Check identity match for all patches
+        const currentIdentity = computeIdentity(state.selectedElement);
+        const identityMatch = patches.every(p => {
+          if (!p.identityToken) return true;
+          return (
+            p.identityToken.tagName === currentIdentity.tagName &&
+            p.identityToken.textPreview === currentIdentity.textPreview &&
+            p.identityToken.classList === currentIdentity.classList &&
+            p.identityToken.parentTag === currentIdentity.parentTag
+          );
+        });
+        
+        // Build export using the handoff utility
+        const exportData: PromptHandoffExport = createHandoffExport(
+          elementMetadata,
+          patches,
+          selectorStatus,
+          matchCount,
+          identityMatch
+        );
+        
+        sendResponse({ exportData, patchCount: patches.length });
       }
       break;
 

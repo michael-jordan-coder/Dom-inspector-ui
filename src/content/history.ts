@@ -103,6 +103,14 @@ export function getPatchesForSelector(selector: string): StylePatch[] {
 }
 
 /**
+ * Get a copy of the entire undo stack (all applied patches).
+ * Used for generating export data.
+ */
+export function getAllPatches(): StylePatch[] {
+  return [...state.undoStack];
+}
+
+/**
  * Persist history to Chrome storage (optional, for session persistence).
  */
 export async function persistHistory(): Promise<void> {

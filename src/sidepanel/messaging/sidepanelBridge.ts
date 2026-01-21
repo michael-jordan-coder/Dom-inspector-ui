@@ -10,6 +10,7 @@ import type {
   ElementMetadata,
   ComputedStylesSnapshot,
   StylePatch,
+  PromptHandoffExport,
 } from '../../shared/types';
 import { MessageType, createMessage, isExtensionMessage } from '../../shared/types';
 
@@ -324,5 +325,27 @@ export async function navigateToSibling(direction: 'prev' | 'next'): Promise<boo
   } catch (e) {
     callbacks.onError?.(String(e));
     return false;
+  }
+}
+
+// ============================================================================
+// Prompt Handoff Export
+// ============================================================================
+
+/**
+ * Get export data for Prompt Handoff.
+ * Returns the selected element, all patches, and stability signals.
+ */
+export async function getExportData(): Promise<{
+  exportData: PromptHandoffExport | null;
+  patchCount: number;
+}> {
+  try {
+    return await sendMessage<{
+      exportData: PromptHandoffExport | null;
+      patchCount: number;
+    }>(createMessage(MessageType.GET_EXPORT_DATA));
+  } catch {
+    return { exportData: null, patchCount: 0 };
   }
 }
