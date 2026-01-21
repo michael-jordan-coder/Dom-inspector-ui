@@ -48,7 +48,7 @@ const styles = {
     flexDirection: 'column',
     gap: spacing[3],
   } as React.CSSProperties,
-  
+
   // Summary section
   summary: {
     padding: spacing[3],
@@ -73,7 +73,7 @@ const styles = {
     flexDirection: 'column',
     gap: '2px',
   } as React.CSSProperties,
-  
+
   // Code blocks
   codeBlock: {
     padding: spacing[3],
@@ -101,7 +101,7 @@ const styles = {
     textTransform: 'uppercase' as const,
     letterSpacing: '0.02em',
   } as React.CSSProperties,
-  
+
   // Warnings (non-dismissable per Phase 1)
   warningsContainer: {
     display: 'flex',
@@ -146,7 +146,7 @@ const styles = {
     opacity: 0.7,
     fontFamily: 'monospace',
   } as React.CSSProperties,
-  
+
   // Confidence indicator
   confidenceRow: {
     display: 'flex',
@@ -168,7 +168,7 @@ const styles = {
   confidenceLow: {
     backgroundColor: '#ef4444',
   } as React.CSSProperties,
-  
+
   // Buttons
   buttonRow: {
     display: 'flex',
@@ -202,7 +202,7 @@ const styles = {
     flex: 'none',
     minWidth: 'auto',
   } as React.CSSProperties,
-  
+
   // Feedback
   feedback: {
     fontSize: '11px',
@@ -215,7 +215,7 @@ const styles = {
   feedbackVisible: {
     opacity: 1,
   } as React.CSSProperties,
-  
+
   // Tabs
   tabs: {
     display: 'flex',
@@ -238,7 +238,7 @@ const styles = {
     color: colors.text,
     borderBottomColor: colors.accent,
   } as React.CSSProperties,
-  
+
   // Empty state
   empty: {
     padding: spacing[4],
@@ -275,9 +275,9 @@ function ConfidenceIndicator({ confidence }: { confidence: SelectorConfidence })
 }
 
 function WarningDisplay({ warning }: { warning: ExportWarning }) {
-  const isLowSeverity = warning.code === 'SELECTOR_POSITIONAL' || 
-                         warning.code === 'MULTIPLE_ELEMENTS_MATCHED' ||
-                         warning.code === 'ELEMENT_NOT_FOUND';
+  const isLowSeverity = warning.code === 'SELECTOR_POSITIONAL' ||
+    warning.code === 'MULTIPLE_ELEMENTS_MATCHED' ||
+    warning.code === 'ELEMENT_NOT_FOUND';
 
   return (
     <div
@@ -391,14 +391,14 @@ export function HandoffSection({
 
   // Generate execution prompt (for AI)
   const executionPrompt = useMemo(() => {
-    if (!legacyExport) return '';
-    return generateExecutionPrompt(legacyExport);
-  }, [legacyExport]);
+    if (!exportV1) return '';
+    return generateExecutionPrompt(exportV1);
+  }, [exportV1]);
 
   // Get overall confidence level
   const overallConfidence = useMemo((): SelectorConfidence => {
     if (!exportV1 || exportV1.patches.length === 0) return 'low';
-    
+
     // Return the lowest confidence among all patches
     const confidences = exportV1.patches.map(p => p.selectorConfidence);
     if (confidences.includes('low')) return 'low';
@@ -445,7 +445,7 @@ export function HandoffSection({
 
   const handleDownloadJSON = useCallback(() => {
     if (!exportV1) return;
-    
+
     try {
       const blob = new Blob([jsonExport], { type: 'application/json' });
       const url = URL.createObjectURL(blob);

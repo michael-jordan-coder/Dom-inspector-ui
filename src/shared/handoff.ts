@@ -46,8 +46,8 @@ export function usesPositionalSelector(selector: string): boolean {
  * Check if a selector has a unique ID.
  */
 export function hasUniqueId(selector: string): boolean {
-  return /#[a-zA-Z][a-zA-Z0-9_-]*(?:\s|$|>|\+|~|\[|:|\.|,)/.test(selector + ' ') || 
-         /^#[a-zA-Z][a-zA-Z0-9_-]*$/.test(selector);
+  return /#[a-zA-Z][a-zA-Z0-9_-]*(?:\s|$|>|\+|~|\[|:|\.|,)/.test(selector + ' ') ||
+    /^#[a-zA-Z][a-zA-Z0-9_-]*$/.test(selector);
 }
 
 /**
@@ -139,6 +139,62 @@ export function filterValidPatches(patches: StylePatch[]): HandoffStylePatch[] {
 }
 
 // ============================================================================
+// Patch Collapsing (Noise Reduction)
+// ============================================================================
+
+/**
+ * Collapse patch history into FinalPatches (one per selector+property).
+ * removes intermediate steps (e.g. slider drag values) and no-op changes.
+ */
+function collapsePatches(patches: StylePatch[]): StylePatch[] {
+  const grouped = new Map<string, StylePatch[]>();
+
+  // Group by "selector|property"
+  for (const p of patches) {
+    const key = `${p.selector}|${String(p.property)}`;
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key)!.push(p);
+  }
+
+  const finalPatches: StylePatch[] = [];
+
+  for (const group of grouped.values()) {
+    // 1. Sort by timestamp (asc) to find chronological order
+    group.sort((a, b) => a.timestamp - b.timestamp);
+
+    // 2. Identify baseline and final
+    const first = group[0];
+    const last = group[group.length - 1];
+
+    // 3. Normalize values for no-op check
+    const fromVal = (first.previousValue || '').trim().replace(/\s+/g, ' ');
+    const toVal = (last.value || '').trim().replace(/\s+/g, ' ');
+
+    if (fromVal === toVal) {
+      continue; // Drop no-op
+    }
+
+    // 4. Construct collapsed patch
+    // We use 'last' as base to keep latest metadata (timestamp, identity)
+    // But we overwrite previousValue with the earliest baseline.
+    const collapsed: StylePatch & { stepsCollapsed: number } = {
+      ...last,
+      previousValue: first.previousValue,
+      value: last.value,
+      // @ts-ignore: Adding ad-hoc property for export payload
+      stepsCollapsed: Math.max(0, group.length - 1)
+    };
+
+    finalPatches.push(collapsed);
+  }
+
+  // Sort by timestamp for consistent output
+  finalPatches.sort((a, b) => a.timestamp - b.timestamp);
+
+  return finalPatches;
+}
+
+// ============================================================================
 // CSS Property Formatting
 // ============================================================================
 
@@ -191,8 +247,10 @@ export function createExportSchemaV1(
   identityMatch: boolean
 ): VisualUIInspectorExport {
   const now = new Date().toISOString();
-  const validPatches = filterValidPatches(patches);
-  
+  // Collapse patches first to remove noise, then filter for validity
+  const collapsedPatches = collapsePatches(patches);
+  const validPatches = filterValidPatches(collapsedPatches);
+
   // Compute confidence for each patch's selector
   const finalPatches: FinalPatch[] = validPatches.map((patch) => {
     const confidence = computeSelectorConfidence(patch.selector, matchCount);
@@ -316,7 +374,9 @@ export function createHandoffExport(
   matchCount: number,
   identityMatch: boolean
 ): PromptHandoffExport {
-  const validPatches = filterValidPatches(patches);
+  // Collapse patches first to remove noise, then filter for validity
+  const collapsedPatches = collapsePatches(patches);
+  const validPatches = filterValidPatches(collapsedPatches);
 
   const stability: StabilitySignals = {
     selectorResolution: {

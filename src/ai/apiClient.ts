@@ -43,7 +43,7 @@ interface AIRequestOptions {
 
 function buildOpenAIRequest(options: AIRequestOptions): RequestInit {
   const { credentials, systemPrompt, userMessage } = options;
-  
+
   return {
     method: 'POST',
     headers: {
@@ -65,7 +65,7 @@ function buildOpenAIRequest(options: AIRequestOptions): RequestInit {
 
 function buildAnthropicRequest(options: AIRequestOptions): RequestInit {
   const { credentials, systemPrompt, userMessage } = options;
-  
+
   return {
     method: 'POST',
     headers: {
@@ -132,21 +132,21 @@ function extractAnthropicContent(response: AnthropicResponse): string {
 function parseAIResponse(raw: string): AIResponse {
   const sections = {
     summary: extractSection(raw, 'Summary'),
-    implementationGuidance: extractSection(raw, 'Implementation Guidance') || 
-                            extractSection(raw, 'Implementation'),
+    implementationGuidance: extractSection(raw, 'Implementation Guidance') ||
+      extractSection(raw, 'Implementation'),
     selectorDetails: extractSection(raw, 'Selector Details') ||
-                     extractSection(raw, 'Selectors'),
+      extractSection(raw, 'Selectors'),
     warnings: extractSection(raw, 'Warnings'),
     verificationSteps: extractSection(raw, 'Verification Steps') ||
-                       extractSection(raw, 'Verification'),
+      extractSection(raw, 'Verification'),
     refusalNotice: extractSection(raw, 'Unable to Proceed') ||
-                   extractSection(raw, 'Refusal'),
+      extractSection(raw, 'Refusal'),
   };
 
   // Check if this is a refusal
-  const isRefusal = !!sections.refusalNotice || 
-                    raw.toLowerCase().includes('cannot proceed') ||
-                    raw.toLowerCase().includes('unable to proceed');
+  const isRefusal = !!sections.refusalNotice ||
+    raw.toLowerCase().includes('cannot proceed') ||
+    raw.toLowerCase().includes('unable to proceed');
 
   // Validate required sections (unless refusal)
   const validationErrors: string[] = [];
@@ -243,7 +243,7 @@ export async function callAI(options: CallAIOptions): Promise<CallAIResult> {
   const timeoutId = setTimeout(() => timeoutController.abort(), timeoutMs);
 
   // Combine signals if abort signal provided
-  const signal = abortSignal 
+  const signal = abortSignal
     ? combineAbortSignals(abortSignal, timeoutController.signal)
     : timeoutController.signal;
 
@@ -254,6 +254,7 @@ export async function callAI(options: CallAIOptions): Promise<CallAIResult> {
       : buildAnthropicRequest({ credentials, systemPrompt, userMessage, abortSignal: signal });
 
     console.log(`[AI] Calling ${provider} API...`);
+    console.log(`[AI] Payload size: ${userMessage.length} chars. Preview: ${userMessage.substring(0, 200)}...`);
     const response = await fetch(endpoint, requestInit);
 
     clearTimeout(timeoutId);
@@ -355,7 +356,7 @@ export async function testCredentials(credentials: AICredentials): Promise<CallA
 
 function combineAbortSignals(...signals: AbortSignal[]): AbortSignal {
   const controller = new AbortController();
-  
+
   for (const signal of signals) {
     if (signal.aborted) {
       controller.abort();
@@ -363,6 +364,6 @@ function combineAbortSignals(...signals: AbortSignal[]): AbortSignal {
     }
     signal.addEventListener('abort', () => controller.abort(), { once: true });
   }
-  
+
   return controller.signal;
 }

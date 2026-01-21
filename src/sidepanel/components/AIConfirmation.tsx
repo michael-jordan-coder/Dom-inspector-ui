@@ -27,7 +27,7 @@ const styles = {
     borderRadius: radii.lg,
     border: `1px solid ${colors.border}`,
   } as React.CSSProperties,
-  
+
   // Output display
   outputContainer: {
     display: 'flex',
@@ -54,7 +54,7 @@ const styles = {
     whiteSpace: 'pre-wrap',
     lineHeight: 1.5,
   } as React.CSSProperties,
-  
+
   // Refusal display
   refusal: {
     padding: spacing[3],
@@ -77,7 +77,7 @@ const styles = {
     lineHeight: 1.5,
     whiteSpace: 'pre-wrap',
   } as React.CSSProperties,
-  
+
   // Acknowledgment section
   acknowledgmentSection: {
     display: 'flex',
@@ -112,7 +112,7 @@ const styles = {
     cursor: 'pointer',
     accentColor: colors.accent,
   } as React.CSSProperties,
-  
+
   // Buttons
   buttonRow: {
     display: 'flex',
@@ -147,7 +147,7 @@ const styles = {
     opacity: 0.5,
     cursor: 'not-allowed',
   } as React.CSSProperties,
-  
+
   // Helper text
   helperText: {
     fontSize: '11px',
@@ -193,6 +193,8 @@ interface AIConfirmationProps {
   onDismiss: () => void;
   /** Called when user requests regeneration */
   onRegenerate?: () => void;
+  /** Whether the response has been confirmed */
+  isConfirmed?: boolean;
 }
 
 // ============================================================================
@@ -204,12 +206,13 @@ export function AIConfirmation({
   onConfirm,
   onDismiss,
   onRegenerate,
+  isConfirmed = false,
 }: AIConfirmationProps): React.ReactElement {
   // Track acknowledgment state
   const [acknowledged, setAcknowledged] = useState<Record<string, boolean>>({});
-  
+
   const allAcknowledged = ACKNOWLEDGMENT_ITEMS.every(item => acknowledged[item.id]);
-  
+
   const handleCheckboxChange = useCallback((id: string) => {
     setAcknowledged(prev => ({
       ...prev,
@@ -230,7 +233,7 @@ export function AIConfirmation({
             {response.sections.refusalNotice || response.raw}
           </div>
         </div>
-        
+
         <div style={styles.buttonRow}>
           <button style={styles.button} onClick={onDismiss}>
             <AppIcon name="close" size={14} />
@@ -254,7 +257,7 @@ export function AIConfirmation({
         <AppIcon name="check" size={18} color={colors.success} />
         AI Response Received
       </div>
-      
+
       {/* Output Content */}
       <div style={styles.outputContainer}>
         {response.sections.summary && (
@@ -267,7 +270,7 @@ export function AIConfirmation({
             </div>
           </div>
         )}
-        
+
         {response.sections.implementationGuidance && (
           <div>
             <div style={{ fontSize: '11px', fontWeight: 500, color: colors.textMuted, marginBottom: spacing[1] }}>
@@ -278,7 +281,7 @@ export function AIConfirmation({
             </div>
           </div>
         )}
-        
+
         {response.sections.warnings && (
           <div>
             <div style={{ fontSize: '11px', fontWeight: 500, color: '#fcd34d', marginBottom: spacing[1] }}>
@@ -289,7 +292,7 @@ export function AIConfirmation({
             </div>
           </div>
         )}
-        
+
         {response.sections.verificationSteps && (
           <div>
             <div style={{ fontSize: '11px', fontWeight: 500, color: colors.textMuted, marginBottom: spacing[1] }}>
@@ -313,8 +316,9 @@ export function AIConfirmation({
               <input
                 type="checkbox"
                 style={styles.checkbox}
-                checked={!!acknowledged[item.id]}
+                checked={!!acknowledged[item.id] || isConfirmed}
                 onChange={() => handleCheckboxChange(item.id)}
+                disabled={isConfirmed}
               />
               <span>{item.text}</span>
             </label>
@@ -326,7 +330,7 @@ export function AIConfirmation({
       <div style={styles.buttonRow}>
         <button style={styles.button} onClick={onDismiss}>
           <AppIcon name="close" size={14} />
-          Dismiss
+          {isConfirmed ? 'Close' : 'Dismiss'}
         </button>
         {onRegenerate && (
           <button style={styles.button} onClick={onRegenerate}>
@@ -338,14 +342,15 @@ export function AIConfirmation({
           style={{
             ...styles.button,
             ...styles.buttonSuccess,
-            ...(allAcknowledged ? {} : styles.buttonDisabled),
+            ...(allAcknowledged || isConfirmed ? {} : styles.buttonDisabled),
+            ...(isConfirmed ? { opacity: 0.8, cursor: 'default' } : {}),
           }}
-          onClick={onConfirm}
-          disabled={!allAcknowledged}
-          title={allAcknowledged ? 'Confirm output' : 'Please acknowledge all items first'}
+          onClick={isConfirmed ? undefined : onConfirm}
+          disabled={!allAcknowledged && !isConfirmed}
+          title={isConfirmed ? 'Response confirmed' : allAcknowledged ? 'Confirm output' : 'Please acknowledge all items first'}
         >
           <AppIcon name="check" size={14} />
-          I Understand & Confirm
+          {isConfirmed ? 'Confirmed' : 'I Understand & Confirm'}
         </button>
       </div>
 

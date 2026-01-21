@@ -14,6 +14,7 @@ import { AISettings } from '../components/AISettings';
 import { AIConfirmation } from '../components/AIConfirmation';
 import {
   aiStateMachine,
+  useAIStateMachine,
   callAI,
   type AIResponse,
   type AICredentials,
@@ -21,6 +22,7 @@ import {
 } from '../../ai';
 import { getExportData } from '../messaging/sidepanelBridge';
 import { generateExecutionPrompt } from '../../shared/promptTemplate';
+import { createExportSchemaV1 } from '../../shared/handoff';
 
 // ============================================================================
 // System Prompt (Phase 3 Guardrails)
@@ -66,12 +68,26 @@ const styles = {
   container: {
     display: 'flex',
     flexDirection: 'column',
-    gap: spacing[4],
-    padding: spacing[4],
+    height: '100%',
+    overflow: 'hidden',
+  } as React.CSSProperties,
+
+  body: {
     flex: 1,
     overflowY: 'auto',
+    minHeight: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: spacing[4],
+    padding: spacing[4],
   } as React.CSSProperties,
-  
+
+  footer: {
+    flexShrink: 0,
+    padding: spacing[4],
+    paddingTop: 0,
+  } as React.CSSProperties,
+
   // Hero section for empty state
   hero: {
     display: 'flex',
@@ -107,7 +123,7 @@ const styles = {
     lineHeight: 1.5,
     margin: 0,
   } as React.CSSProperties,
-  
+
   // Status card
   statusCard: {
     display: 'flex',
@@ -126,7 +142,7 @@ const styles = {
   } as React.CSSProperties,
   statusConnected: { backgroundColor: '#22c55e' } as React.CSSProperties,
   statusDisconnected: { backgroundColor: '#6b7280' } as React.CSSProperties,
-  statusGenerating: { 
+  statusGenerating: {
     backgroundColor: '#fbbf24',
     animation: 'pulse 1.5s ease-in-out infinite',
   } as React.CSSProperties,
@@ -145,7 +161,7 @@ const styles = {
     fontSize: '11px',
     color: colors.textMuted,
   } as React.CSSProperties,
-  
+
   // Generate section
   generateSection: {
     display: 'flex',
@@ -177,7 +193,7 @@ const styles = {
     border: `1px solid ${colors.border}`,
     color: colors.text,
   } as React.CSSProperties,
-  
+
   // Loading state
   loadingContainer: {
     display: 'flex',
@@ -199,7 +215,7 @@ const styles = {
     color: colors.textMuted,
     textAlign: 'center',
   } as React.CSSProperties,
-  
+
   // Error display
   error: {
     display: 'flex',
@@ -213,7 +229,7 @@ const styles = {
     fontSize: '13px',
     lineHeight: 1.5,
   } as React.CSSProperties,
-  
+
   // Changes summary
   changesSummary: {
     display: 'flex',
@@ -238,7 +254,7 @@ const styles = {
     fontWeight: 700,
     color: colors.text,
   } as React.CSSProperties,
-  
+
   // Tips
   tips: {
     display: 'flex',
@@ -277,6 +293,10 @@ export function AIPage({ hasChanges, patchCount, onSwitchToInspector }: AIPagePr
   const [error, setError] = useState<string | null>(null);
   const [response, setResponse] = useState<AIResponse | null>(null);
 
+  // Connect to global AI state machine
+  const aiState = useAIStateMachine();
+  const isConfirmed = aiState.state === 'CONFIRMED';
+
   // Check credentials on mount
   useEffect(() => {
     checkCredentials();
@@ -307,6 +327,19 @@ export function AIPage({ hasChanges, patchCount, onSwitchToInspector }: AIPagePr
         return;
       }
 
+      // Ensure state machine is connected
+      if (!aiStateMachine.isConnected()) {
+        await aiStateMachine.connect(credentials);
+      } else if (!aiStateMachine.isIdle() && aiState.state !== 'FAILED' && aiState.state !== 'ABORTED' && aiState.state !== 'CONFIRMED' && aiState.state !== 'READY') {
+        // Reset if we are in a stuck state or reusing session
+        aiStateMachine.returnToIdle();
+      }
+
+      // If we confirm previous session or were in a finish state, return to idle to start fresh
+      if (['CONFIRMED', 'FAILED', 'ABORTED', 'REVIEW_REQUIRED'].includes(aiState.state)) {
+        aiStateMachine.returnToIdle();
+      }
+
       // Get fresh export data
       const exportResult = await getExportData();
       if (!exportResult.exportData || exportResult.patchCount === 0) {
@@ -315,8 +348,41 @@ export function AIPage({ hasChanges, patchCount, onSwitchToInspector }: AIPagePr
         return;
       }
 
+      // Convert to Export Schema v1 (Required for AI)
+      const { exportData, pageUrl, viewport } = exportResult;
+      const v1Export = createExportSchemaV1(
+        pageUrl || 'unknown',
+        viewport || { width: 1280, height: 800 }, // Fallback default
+        exportData.patches,
+        exportData.stability.selectorResolution.status,
+        exportData.stability.selectorResolution.matchCount,
+        exportData.stability.identityMatch
+      );
+
+      // 1. Prepare Execution Context & Run Gates
+      const context: any = {
+        mode: 'universal', // Defaulting to universal for Phase 0/1
+        exportPayload: v1Export,
+        stabilityAcknowledged: true, // Assuming explicit user action in inspector implies ack for now, or TODO: add UI for this
+      };
+
+      const gateResults = await aiStateMachine.prepareExecution(context);
+      const allPassed = gateResults.every(r => r.passed);
+
+      if (!allPassed) {
+        const failure = gateResults.find(r => !r.passed);
+        setError(`Cannot start generation: ${failure?.message || 'Gate checks failed'}`);
+        setIsLoading(false);
+        return;
+      }
+
+      // 2. Start Generation
+      aiStateMachine.startGeneration();
+
       // Generate prompt from export data
-      const userMessage = generateExecutionPrompt(exportResult.exportData);
+      const userMessage = generateExecutionPrompt(v1Export);
+
+      console.log('[DEBUG] AI Prompt Source Version:', v1Export.exportVersion);
 
       // Make AI call
       const result = await callAI({
@@ -328,10 +394,17 @@ export function AIPage({ hasChanges, patchCount, onSwitchToInspector }: AIPagePr
 
       if (result.success && result.response) {
         setResponse(result.response);
+        // 3. Receive Response
         aiStateMachine.receiveResponse(result.response);
       } else {
         const errorMessage = result.error?.message || 'AI request failed';
         setError(errorMessage);
+
+        // 4. Handle Failure
+        aiStateMachine.fail({
+          code: result.error?.code || 'SERVER_ERROR',
+          message: errorMessage
+        });
 
         if (result.error?.code === 'AUTH_ERROR') {
           await chrome.storage.local.set({
@@ -345,11 +418,16 @@ export function AIPage({ hasChanges, patchCount, onSwitchToInspector }: AIPagePr
       }
     } catch (e) {
       console.error('[AI] Generation error:', e);
-      setError(e instanceof Error ? e.message : 'Unknown error');
+      const msg = e instanceof Error ? e.message : 'Unknown error';
+      setError(msg);
+      aiStateMachine.fail({
+        code: 'SERVER_ERROR',
+        message: msg
+      });
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [aiState.state]);
 
   const handleConfirm = useCallback(() => {
     aiStateMachine.confirm();
@@ -374,123 +452,130 @@ export function AIPage({ hasChanges, patchCount, onSwitchToInspector }: AIPagePr
 
   return (
     <div style={styles.container}>
-      {/* Show setup if no credentials */}
-      {showSetup && (
-        <>
-          {/* Hero section */}
-          <div style={styles.hero}>
-            <div style={styles.heroIcon}>
-              <AppIcon name="command" size={32} />
+      <div style={styles.body}>
+        {/* Show setup if no credentials */}
+        {showSetup && (
+          <>
+            {/* Hero section */}
+            <div style={styles.hero}>
+              <div style={styles.heroIcon}>
+                <AppIcon name="command" size={32} />
+              </div>
+              <h2 style={styles.heroTitle}>AI Assistant</h2>
+              <p style={styles.heroDescription}>
+                Connect your AI API to generate implementation guidance from your visual changes.
+              </p>
             </div>
-            <h2 style={styles.heroTitle}>AI Assistant</h2>
-            <p style={styles.heroDescription}>
-              Connect your AI API to generate implementation guidance from your visual changes.
-            </p>
-          </div>
 
-          {/* Settings card */}
-          <AISettings onCredentialsChange={setHasCredentials} />
+            {/* Settings card */}
+            <AISettings onCredentialsChange={setHasCredentials} />
 
-          {/* Tips */}
-          <div style={styles.tips}>
-            <div style={styles.tipTitle}>
-              <AppIcon name="alertCircle" size={14} />
-              How it works
+            {/* Tips */}
+            <div style={styles.tips}>
+              <div style={styles.tipTitle}>
+                <AppIcon name="alertCircle" size={14} />
+                How it works
+              </div>
+              <ul style={{ margin: 0, paddingLeft: 16 }}>
+                <li>Your API key is stored locally, never sent to our servers</li>
+                <li>Keys are transmitted directly to OpenAI/Anthropic</li>
+                <li>AI analyzes your visual changes and generates CSS guidance</li>
+              </ul>
             </div>
-            <ul style={{ margin: 0, paddingLeft: 16 }}>
-              <li>Your API key is stored locally, never sent to our servers</li>
-              <li>Keys are transmitted directly to OpenAI/Anthropic</li>
-              <li>AI analyzes your visual changes and generates CSS guidance</li>
-            </ul>
+          </>
+        )}
+
+        {/* Loading state */}
+        {isLoading && (
+          <div style={styles.loadingContainer}>
+            <div style={styles.spinner} />
+            <div style={styles.loadingText}>
+              Analyzing {patchCount} change{patchCount !== 1 ? 's' : ''} and generating guidance...
+            </div>
+            <button
+              style={{ ...styles.generateButton, ...styles.buttonSecondary, width: 'auto', padding: '10px 24px' }}
+              onClick={() => setIsLoading(false)}
+            >
+              Cancel
+            </button>
           </div>
-        </>
-      )}
+        )}
 
-      {/* Loading state */}
-      {isLoading && (
-        <div style={styles.loadingContainer}>
-          <div style={styles.spinner} />
-          <div style={styles.loadingText}>
-            Analyzing {patchCount} change{patchCount !== 1 ? 's' : ''} and generating guidance...
+        {/* Error display */}
+        {error && !isLoading && (
+          <div style={styles.error}>
+            <AppIcon name="alertCircle" size={18} color="#f87171" />
+            <div>
+              <strong>Error: </strong>
+              {error}
+            </div>
           </div>
-          <button
-            style={{ ...styles.generateButton, ...styles.buttonSecondary, width: 'auto', padding: '10px 24px' }}
-            onClick={() => setIsLoading(false)}
-          >
-            Cancel
-          </button>
-        </div>
-      )}
+        )}
 
-      {/* Error display */}
-      {error && !isLoading && (
-        <div style={styles.error}>
-          <AppIcon name="alertCircle" size={18} color="#f87171" />
-          <div>
-            <strong>Error: </strong>
-            {error}
-          </div>
-        </div>
-      )}
+        {/* Response with confirmation */}
+        {response && !isLoading && (
+          <AIConfirmation
+            response={response}
+            onConfirm={handleConfirm}
+            onDismiss={handleDismiss}
+            onRegenerate={handleRegenerate}
+            isConfirmed={isConfirmed}
+          />
+        )}
 
-      {/* Response with confirmation */}
-      {response && !isLoading && (
-        <AIConfirmation
-          response={response}
-          onConfirm={handleConfirm}
-          onDismiss={handleDismiss}
-          onRegenerate={handleRegenerate}
-        />
-      )}
+        {/* Generate UI */}
+        {showGenerateUI && (
+          <>
+            {/* Status */}
+            <div style={styles.statusCard}>
+              <div style={{ ...styles.statusDot, ...styles.statusConnected }} />
+              <div style={styles.statusInfo}>
+                <div style={styles.statusTitle}>AI Connected</div>
+                <div style={styles.statusSubtitle}>Ready to generate implementation guidance</div>
+              </div>
+            </div>
 
-      {/* Generate UI */}
+            {/* Changes summary */}
+            {hasChanges ? (
+              <div style={styles.changesSummary}>
+                <div style={styles.changesSummaryHeader}>
+                  <span style={{ color: colors.textMuted }}>VISUAL CHANGES</span>
+                  <span style={{ color: colors.accent, fontWeight: 600 }}>Ready</span>
+                </div>
+                <div style={styles.changesCount}>
+                  {patchCount}
+                  <span style={{ fontSize: '14px', fontWeight: 400, color: colors.textMuted }}>
+                    {patchCount === 1 ? 'change' : 'changes'} captured
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div style={styles.changesSummary}>
+                <div style={styles.changesSummaryHeader}>
+                  <span style={{ color: colors.textMuted }}>VISUAL CHANGES</span>
+                  <span style={{ color: colors.warning }}>None</span>
+                </div>
+                <div style={{ fontSize: '13px', color: colors.textMuted }}>
+                  Make some visual changes in the Inspector to generate AI guidance.
+                </div>
+                {onSwitchToInspector && (
+                  <button
+                    style={{ ...styles.generateButton, ...styles.buttonSecondary, marginTop: spacing[2] }}
+                    onClick={onSwitchToInspector}
+                  >
+                    <AppIcon name="pointer" size={16} />
+                    Go to Inspector
+                  </button>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Footer CTA */}
       {showGenerateUI && (
-        <>
-          {/* Status */}
-          <div style={styles.statusCard}>
-            <div style={{ ...styles.statusDot, ...styles.statusConnected }} />
-            <div style={styles.statusInfo}>
-              <div style={styles.statusTitle}>AI Connected</div>
-              <div style={styles.statusSubtitle}>Ready to generate implementation guidance</div>
-            </div>
-          </div>
-
-          {/* Changes summary */}
-          {hasChanges ? (
-            <div style={styles.changesSummary}>
-              <div style={styles.changesSummaryHeader}>
-                <span style={{ color: colors.textMuted }}>VISUAL CHANGES</span>
-                <span style={{ color: colors.accent, fontWeight: 600 }}>Ready</span>
-              </div>
-              <div style={styles.changesCount}>
-                {patchCount}
-                <span style={{ fontSize: '14px', fontWeight: 400, color: colors.textMuted }}>
-                  {patchCount === 1 ? 'change' : 'changes'} captured
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div style={styles.changesSummary}>
-              <div style={styles.changesSummaryHeader}>
-                <span style={{ color: colors.textMuted }}>VISUAL CHANGES</span>
-                <span style={{ color: colors.warning }}>None</span>
-              </div>
-              <div style={{ fontSize: '13px', color: colors.textMuted }}>
-                Make some visual changes in the Inspector to generate AI guidance.
-              </div>
-              {onSwitchToInspector && (
-                <button
-                  style={{ ...styles.generateButton, ...styles.buttonSecondary, marginTop: spacing[2] }}
-                  onClick={onSwitchToInspector}
-                >
-                  <AppIcon name="pointer" size={16} />
-                  Go to Inspector
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Generate button */}
+        <div style={styles.footer}>
           <button
             style={{
               ...styles.generateButton,
@@ -502,7 +587,7 @@ export function AIPage({ hasChanges, patchCount, onSwitchToInspector }: AIPagePr
             <AppIcon name="command" size={18} />
             Generate Implementation Guide
           </button>
-        </>
+        </div>
       )}
 
       {/* Animation keyframes */}

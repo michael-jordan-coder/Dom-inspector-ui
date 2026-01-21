@@ -5,53 +5,41 @@
  * how to apply verified visual changes to source code.
  */
 
-import type { PromptHandoffExport, HandoffStylePatch } from './types';
+import type { VisualUIInspectorExport, FinalPatch } from './types';
 
-/**
- * Convert camelCase CSS property to kebab-case.
- */
-function toKebabCase(str: string): string {
-  return str.replace(/([A-Z])/g, '-$1').toLowerCase();
-}
+
 
 /**
  * Format patches as human-readable delta list.
  */
-function formatPatchDeltas(patches: HandoffStylePatch[]): string {
+function formatPatchDeltas(patches: FinalPatch[]): string {
   return patches
-    .map((p) => `- ${toKebabCase(String(p.property))}: ${p.previousValue} → ${p.value}`)
+    .map((p) => `- ${p.property}: ${p.originalValue ?? 'null'} → ${p.finalValue}`)
     .join('\n');
 }
 
 /**
  * Generate the full execution prompt for an AI coding agent.
  */
-export function generateExecutionPrompt(exportData: PromptHandoffExport): string {
-  const { selectedElement, patches, stability } = exportData;
+export function generateExecutionPrompt(exportData: VisualUIInspectorExport): string {
+  const { patches, warnings } = exportData;
+  const targetSelector = patches.length > 0 ? patches[0].selector : '(no-selector)';
 
   // Format the JSON export
   const jsonExport = JSON.stringify(exportData, null, 2);
 
   // Build stability warning if needed
   let stabilityWarning = '';
-  if (stability.selectorResolution.status !== 'OK') {
-    stabilityWarning = `
-⚠️ SELECTOR WARNING: Status is ${stability.selectorResolution.status}
-   The selector may not reliably identify this element in the codebase.
-   Recommend adding a stable identifier (data-testid, unique ID, etc.)
-`;
-  } else if (stability.usesNthOfType) {
-    stabilityWarning = `
-⚠️ FRAGILE SELECTOR: Uses :nth-of-type positioning
-   This selector depends on DOM position and may break if siblings change.
-   Recommend adding a stable identifier (data-testid, unique ID, etc.)
-`;
-  } else if (!stability.identityMatch) {
-    stabilityWarning = `
-⚠️ IDENTITY MISMATCH: Element may have changed since patches were recorded
-   Verify the target element matches the expected identity before applying changes.
-`;
+  if (warnings.length > 0) {
+    const warningText = warnings.map(w => `⚠️ ${w.code}: ${w.message}`).join('\n');
+    stabilityWarning = `\nWARNINGS:\n${warningText}\n`;
   }
+
+  // Derive simple hints from selector if possible
+  const idMatch = targetSelector.match(/#([a-zA-Z0-9_-]+)/);
+  const classMatch = targetSelector.match(/\.([a-zA-Z0-9_-]+)/g);
+  const idHint = idMatch ? `ID: #${idMatch[1]}` : '';
+  const classHint = classMatch ? `Classes: ${classMatch.map(c => c.substring(1)).join(', ')}` : '';
 
   return `You are a SENIOR CONTEXT-AWARE CODING AGENT with FULL REPOSITORY ACCESS.
 
@@ -87,7 +75,7 @@ ${stabilityWarning}
 REQUIRED VISUAL OUTCOME (EXACT)
 ==================================================
 
-Apply these deltas to the source code styles of the target element (${selectedElement.selector}):
+Apply these deltas to the source code styles of the target element (${targetSelector}):
 ${formatPatchDeltas(patches)}
 
 Everything else should remain unchanged.
@@ -97,10 +85,9 @@ EXECUTION INSTRUCTIONS
 ==================================================
 
 1) Locate the element in the repo:
-   - Search for selector: ${selectedElement.selector}
-   - Search for text: "${selectedElement.textPreview}"
-   - Tag: <${selectedElement.tagName}>
-   - Classes: ${selectedElement.classList.join(', ') || '(none)'}
+   - Search for selector: ${targetSelector}
+   - ${idHint}
+   - ${classHint}
 
 2) Identify where its styling comes from:
    - CSS file, Tailwind utilities, styled-components, CSS Modules, or inline styles
@@ -111,7 +98,7 @@ EXECUTION INSTRUCTIONS
 
 4) Verify:
    - Run the project
-   - Confirm computed styles for ${selectedElement.selector} match exactly
+   - Confirm computed styles for ${targetSelector} match exactly
    - Confirm no other elements were unintentionally affected
 
 5) Output:
@@ -126,11 +113,11 @@ BEGIN NOW.
 /**
  * Generate a compact summary of changes for display.
  */
-export function generateChangeSummary(patches: HandoffStylePatch[]): string {
+export function generateChangeSummary(patches: FinalPatch[]): string {
   if (patches.length === 0) return 'No changes';
   if (patches.length === 1) {
     const p = patches[0];
-    return `${toKebabCase(String(p.property))}: ${p.previousValue} → ${p.value}`;
+    return `${p.property}: ${p.originalValue ?? 'unset'} → ${p.finalValue}`;
   }
   return `${patches.length} changes`;
 }

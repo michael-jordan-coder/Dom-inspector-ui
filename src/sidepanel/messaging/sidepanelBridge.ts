@@ -11,6 +11,7 @@ import type {
   ComputedStylesSnapshot,
   StylePatch,
   PromptHandoffExport,
+  Viewport,
 } from '../../shared/types';
 import { MessageType, createMessage, isExtensionMessage } from '../../shared/types';
 
@@ -111,7 +112,7 @@ async function sendMessage<T>(message: ExtensionMessage): Promise<T> {
 
     chrome.runtime.sendMessage(message, (response) => {
       clearTimeout(timeout);
-      
+
       if (chrome.runtime.lastError) {
         const errorMsg = chrome.runtime.lastError.message || '';
         // Provide more helpful error messages
@@ -122,12 +123,12 @@ async function sendMessage<T>(message: ExtensionMessage): Promise<T> {
         }
         return;
       }
-      
+
       if (response?.error) {
         reject(new Error(response.error));
         return;
       }
-      
+
       resolve(response as T);
     });
   });
@@ -339,11 +340,15 @@ export async function navigateToSibling(direction: 'prev' | 'next'): Promise<boo
 export async function getExportData(): Promise<{
   exportData: PromptHandoffExport | null;
   patchCount: number;
+  pageUrl?: string;
+  viewport?: Viewport;
 }> {
   try {
     return await sendMessage<{
       exportData: PromptHandoffExport | null;
       patchCount: number;
+      pageUrl?: string;
+      viewport?: Viewport;
     }>(createMessage(MessageType.GET_EXPORT_DATA));
   } catch {
     return { exportData: null, patchCount: 0 };

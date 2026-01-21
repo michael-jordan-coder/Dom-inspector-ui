@@ -13,8 +13,8 @@ import { AppIcon } from '../primitives/AppIcon';
 import { colors, spacing, radii } from '../tokens';
 import { AISettings } from '../components/AISettings';
 import { AIConfirmation } from '../components/AIConfirmation';
-import { 
-  useAIStateMachine, 
+import {
+  useAIStateMachine,
   aiStateMachine,
   callAI,
   type AIResponse,
@@ -23,6 +23,7 @@ import {
 } from '../../ai';
 import { getExportData } from '../messaging/sidepanelBridge';
 import { generateExecutionPrompt } from '../../shared/promptTemplate';
+import { createExportSchemaV1 } from '../../shared/handoff';
 
 // ============================================================================
 // System Prompt (Phase 3 Guardrails)
@@ -68,7 +69,7 @@ const styles = {
     flexDirection: 'column',
     gap: spacing[3],
   } as React.CSSProperties,
-  
+
   statusBar: {
     display: 'flex',
     alignItems: 'center',
@@ -86,7 +87,7 @@ const styles = {
   statusConnected: { backgroundColor: '#22c55e' } as React.CSSProperties,
   statusDisconnected: { backgroundColor: '#6b7280' } as React.CSSProperties,
   statusGenerating: { backgroundColor: '#fbbf24' } as React.CSSProperties,
-  
+
   generateButton: {
     display: 'flex',
     alignItems: 'center',
@@ -107,7 +108,7 @@ const styles = {
     opacity: 0.5,
     cursor: 'not-allowed',
   } as React.CSSProperties,
-  
+
   loadingContainer: {
     display: 'flex',
     flexDirection: 'column',
@@ -123,7 +124,7 @@ const styles = {
     borderRadius: '50%',
     animation: 'spin 1s linear infinite',
   } as React.CSSProperties,
-  
+
   error: {
     padding: spacing[3],
     backgroundColor: 'rgba(239, 68, 68, 0.12)',
@@ -132,7 +133,7 @@ const styles = {
     color: '#fca5a5',
     fontSize: '12px',
   } as React.CSSProperties,
-  
+
   hint: {
     fontSize: '11px',
     color: colors.textMuted,
@@ -156,17 +157,17 @@ export function AISection({ refreshTrigger }: AISectionProps): React.ReactElemen
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [response, setResponse] = useState<AIResponse | null>(null);
-  
+
   // Initialize state machine on mount
   useEffect(() => {
     aiStateMachine.initialize();
   }, []);
-  
+
   // Check for changes when refreshTrigger updates
   useEffect(() => {
     checkForChanges();
   }, [refreshTrigger]);
-  
+
   const checkForChanges = useCallback(async () => {
     try {
       const result = await getExportData();
@@ -175,23 +176,23 @@ export function AISection({ refreshTrigger }: AISectionProps): React.ReactElemen
       setHasChanges(false);
     }
   }, []);
-  
+
   // Handle generate button click
   const handleGenerate = useCallback(async () => {
     setError(null);
     setIsLoading(true);
-    
+
     try {
       // Get credentials
       const credResult = await chrome.storage.local.get(AI_STORAGE_KEYS.CREDENTIALS);
       const credentials = credResult[AI_STORAGE_KEYS.CREDENTIALS] as AICredentials | undefined;
-      
+
       if (!credentials) {
         setError('No AI credentials configured. Please set up your API key first.');
         setIsLoading(false);
         return;
       }
-      
+
       // Get export data
       const exportResult = await getExportData();
       if (!exportResult.exportData || exportResult.patchCount === 0) {
@@ -199,13 +200,24 @@ export function AISection({ refreshTrigger }: AISectionProps): React.ReactElemen
         setIsLoading(false);
         return;
       }
-      
+
+      // Convert to V1 for prompt generation
+      const { exportData, pageUrl, viewport } = exportResult;
+      const v1Export = createExportSchemaV1(
+        pageUrl || 'unknown',
+        viewport || { width: 1280, height: 800 },
+        exportData.patches,
+        exportData.stability.selectorResolution.status,
+        exportData.stability.selectorResolution.matchCount,
+        exportData.stability.identityMatch
+      );
+
       // Generate execution prompt
-      const userMessage = generateExecutionPrompt(exportResult.exportData);
-      
+      const userMessage = generateExecutionPrompt(v1Export);
+
       // Create abort controller
       const abortController = new AbortController();
-      
+
       // Make AI call
       const result = await callAI({
         credentials,
@@ -214,14 +226,14 @@ export function AISection({ refreshTrigger }: AISectionProps): React.ReactElemen
         abortSignal: abortController.signal,
         timeoutMs: 90000, // 90 second timeout for complex responses
       });
-      
+
       if (result.success && result.response) {
         setResponse(result.response);
         aiStateMachine.receiveResponse(result.response);
       } else {
         const errorMessage = result.error?.message || 'AI request failed';
         setError(errorMessage);
-        
+
         // Mark credentials invalid on auth error
         if (result.error?.code === 'AUTH_ERROR') {
           await chrome.storage.local.set({
@@ -239,31 +251,31 @@ export function AISection({ refreshTrigger }: AISectionProps): React.ReactElemen
       setIsLoading(false);
     }
   }, []);
-  
+
   const handleConfirm = useCallback(() => {
     aiStateMachine.confirm();
     // Response stays visible after confirmation
   }, []);
-  
+
   const handleDismiss = useCallback(() => {
     setResponse(null);
     setError(null);
     aiStateMachine.returnToIdle();
   }, []);
-  
+
   const handleRegenerate = useCallback(() => {
     setResponse(null);
     setError(null);
     handleGenerate();
   }, [handleGenerate]);
-  
+
   const isConnected = aiState.state !== 'DISCONNECTED';
   const canGenerate = hasCredentials && hasChanges && !isLoading;
-  
+
   return (
     <>
       <AISettings onCredentialsChange={setHasCredentials} />
-      
+
       <Section
         id="ai-generate"
         title="AI Assistant"
@@ -276,13 +288,13 @@ export function AISection({ refreshTrigger }: AISectionProps): React.ReactElemen
             <div
               style={{
                 ...styles.statusDot,
-                ...(isLoading ? styles.statusGenerating : 
-                    isConnected ? styles.statusConnected : styles.statusDisconnected),
+                ...(isLoading ? styles.statusGenerating :
+                  isConnected ? styles.statusConnected : styles.statusDisconnected),
               }}
             />
             <span style={{ flex: 1, color: colors.text }}>
               {isLoading ? 'Generating...' :
-               isConnected ? 'Ready' : 'Not connected'}
+                isConnected ? 'Ready' : 'Not connected'}
             </span>
             {hasChanges && (
               <span style={{ color: colors.accent, fontSize: '11px' }}>
@@ -290,14 +302,14 @@ export function AISection({ refreshTrigger }: AISectionProps): React.ReactElemen
               </span>
             )}
           </div>
-          
+
           {/* Error display */}
           {error && (
             <div style={styles.error}>
               <strong>Error:</strong> {error}
             </div>
           )}
-          
+
           {/* Loading state */}
           {isLoading && (
             <div style={styles.loadingContainer}>
@@ -313,7 +325,7 @@ export function AISection({ refreshTrigger }: AISectionProps): React.ReactElemen
               </button>
             </div>
           )}
-          
+
           {/* Response display with confirmation */}
           {response && !isLoading && (
             <AIConfirmation
@@ -323,7 +335,7 @@ export function AISection({ refreshTrigger }: AISectionProps): React.ReactElemen
               onRegenerate={handleRegenerate}
             />
           )}
-          
+
           {/* Generate button */}
           {!response && !isLoading && (
             <>
@@ -338,13 +350,13 @@ export function AISection({ refreshTrigger }: AISectionProps): React.ReactElemen
                 <AppIcon name="command" size={16} />
                 Generate Implementation Guide
               </button>
-              
+
               {!hasCredentials && (
                 <div style={styles.hint}>
                   Configure your AI API key above to enable AI assistance.
                 </div>
               )}
-              
+
               {hasCredentials && !hasChanges && (
                 <div style={styles.hint}>
                   Make some visual changes to generate implementation guidance.
@@ -354,7 +366,7 @@ export function AISection({ refreshTrigger }: AISectionProps): React.ReactElemen
           )}
         </div>
       </Section>
-      
+
       {/* Inject spinner animation */}
       <style>{`
         @keyframes spin {

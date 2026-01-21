@@ -11,7 +11,7 @@ import { Section } from '../primitives';
 import { AppIcon } from '../primitives/AppIcon';
 import { colors, spacing, radii } from '../tokens';
 import { getExportData } from '../messaging/sidepanelBridge';
-import { formatHandoffJSON } from '../../shared/handoff';
+import { formatHandoffJSON, createExportSchemaV1 } from '../../shared/handoff';
 import { generateExecutionPrompt } from '../../shared/promptTemplate';
 import type { PromptHandoffExport } from '../../shared/types';
 
@@ -162,7 +162,29 @@ export function ChangesSection({
     if (!exportData) return;
 
     try {
-      const prompt = generateExecutionPrompt(exportData);
+      // Convert to V1 for prompt generation
+      // We do this ad-hoc here since this section is legacy but needs to produce valid prompts
+      const pageUrl = window.location?.href || 'unknown';
+      const viewport = {
+        width: window.innerWidth || 1440,
+        height: window.innerHeight || 900,
+      };
+
+      const internalPatches = exportData.patches.map(p => ({
+        ...p,
+        timestamp: Date.now(),
+      }));
+
+      const v1Export = createExportSchemaV1(
+        pageUrl,
+        viewport,
+        internalPatches,
+        exportData.stability.selectorResolution.status,
+        exportData.stability.selectorResolution.matchCount,
+        exportData.stability.identityMatch
+      );
+
+      const prompt = generateExecutionPrompt(v1Export);
       await navigator.clipboard.writeText(prompt);
       showFeedback('Execution prompt copied to clipboard');
     } catch (e) {

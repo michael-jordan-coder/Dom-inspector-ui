@@ -644,7 +644,7 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendRe
     case MessageType.GET_EXPORT_DATA:
       {
         const patches = getAllPatches();
-        
+
         // No patches = no export data
         if (patches.length === 0 || !state.selectedElement) {
           sendResponse({ exportData: null, patchCount: 0 });
@@ -653,12 +653,12 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendRe
 
         // Get current element metadata
         const elementMetadata = extractElementMetadata(state.selectedElement);
-        
+
         // Resolve selector to check stability
         const resolution = findElementBySelector(elementMetadata.selector);
         const selectorStatus = resolution.status;
         const matchCount = resolution.matchCount ?? (resolution.status === 'OK' ? 1 : 0);
-        
+
         // Check identity match for all patches
         const currentIdentity = computeIdentity(state.selectedElement);
         const identityMatch = patches.every(p => {
@@ -670,7 +670,7 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendRe
             p.identityToken.parentTag === currentIdentity.parentTag
           );
         });
-        
+
         // Build export using the handoff utility
         const exportData: PromptHandoffExport = createHandoffExport(
           elementMetadata,
@@ -679,8 +679,16 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, _sender, sendRe
           matchCount,
           identityMatch
         );
-        
-        sendResponse({ exportData, patchCount: patches.length });
+
+        sendResponse({
+          exportData,
+          patchCount: patches.length,
+          pageUrl: window.location.href,
+          viewport: {
+            width: window.innerWidth,
+            height: window.innerHeight,
+          },
+        });
       }
       break;
 
