@@ -6,9 +6,13 @@
  */
 
 import React, { useEffect, useRef } from 'react';
-import { colors, radii, spacing, typography } from '../tokens';
+// ============================================================================
+// Styles
+// ============================================================================
+
 import type { Command } from '../hooks/useCommandPalette';
 import { AppIcon } from '../primitives';
+import './components.css';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -21,164 +25,8 @@ interface CommandPaletteProps {
   onClose: () => void;
 }
 
-const styles = {
-  overlay: {
-    position: 'fixed' as const,
-    inset: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    zIndex: 2000,
-    display: 'flex',
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-    paddingTop: '10vh',
-    animation: 'fadeIn 0.1s ease-out',
-  } as React.CSSProperties,
-  container: {
-    width: '100%',
-    maxWidth: 400,
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    border: `1px solid ${colors.border}`,
-    boxShadow: '0 16px 48px rgba(0, 0, 0, 0.5)',
-    overflow: 'hidden',
-    animation: 'slideDown 0.15s ease-out',
-  } as React.CSSProperties,
-  searchWrapper: {
-    display: 'flex',
-    alignItems: 'center',
-    padding: spacing[3],
-    borderBottom: `1px solid ${colors.border}`,
-    gap: spacing[2],
-  } as React.CSSProperties,
-  searchIcon: {
-    color: colors.textMuted,
-    flexShrink: 0,
-  } as React.CSSProperties,
-  searchInput: {
-    flex: 1,
-    height: 32,
-    fontSize: typography.sm,
-    fontFamily: 'inherit',
-    fontWeight: 400,
-    color: colors.text,
-    backgroundColor: 'transparent',
-    border: 'none',
-    outline: 'none',
-  } as React.CSSProperties,
-  results: {
-    maxHeight: 300,
-    overflowY: 'auto' as const,
-    padding: spacing[1],
-  } as React.CSSProperties,
-  category: {
-    fontSize: '10px',
-    fontWeight: 500,
-    color: colors.textMuted,
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.05em',
-    padding: `${spacing[2]} ${spacing[3]}`,
-    marginTop: spacing[1],
-  } as React.CSSProperties,
-  commandItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: spacing[2],
-    padding: `${spacing[2]} ${spacing[3]}`,
-    borderRadius: radii.sm,
-    cursor: 'pointer',
-    transition: 'background-color 0.1s',
-  } as React.CSSProperties,
-  commandItemSelected: {
-    backgroundColor: colors.accent,
-  } as React.CSSProperties,
-  commandItemHover: {
-    backgroundColor: colors.surfaceRaised,
-  } as React.CSSProperties,
-  commandIcon: {
-    width: 20,
-    height: 20,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: colors.textMuted,
-    flexShrink: 0,
-  } as React.CSSProperties,
-  commandContent: {
-    flex: 1,
-    minWidth: 0,
-  } as React.CSSProperties,
-  commandLabel: {
-    fontSize: typography.sm,
-    fontWeight: 500,
-    color: colors.text,
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap' as const,
-  } as React.CSSProperties,
-  commandDescription: {
-    fontSize: typography.xs,
-    color: colors.textMuted,
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap' as const,
-    marginTop: 2,
-  } as React.CSSProperties,
-  shortcut: {
-    fontSize: '10px',
-    fontWeight: 500,
-    color: colors.textMuted,
-    backgroundColor: colors.surfaceRaised,
-    padding: '2px 6px',
-    borderRadius: radii.sm,
-    flexShrink: 0,
-  } as React.CSSProperties,
-  empty: {
-    padding: spacing[4],
-    textAlign: 'center' as const,
-    color: colors.textMuted,
-    fontSize: typography.sm,
-  } as React.CSSProperties,
-  footer: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: `${spacing[2]} ${spacing[3]}`,
-    borderTop: `1px solid ${colors.border}`,
-    fontSize: '10px',
-    color: colors.textMuted,
-  } as React.CSSProperties,
-  footerHint: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: spacing[2],
-  } as React.CSSProperties,
-  footerKey: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 18,
-    height: 18,
-    padding: '0 4px',
-    backgroundColor: colors.surfaceRaised,
-    borderRadius: '3px',
-    fontSize: '10px',
-    fontWeight: 500,
-  } as React.CSSProperties,
-};
 
-// CSS keyframes for animations
-const keyframes = `
-  @keyframes slideDown {
-    from {
-      opacity: 0;
-      transform: translateY(-10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-`;
+
 
 export function CommandPalette({
   isOpen,
@@ -259,18 +107,17 @@ export function CommandPalette({
 
   return (
     <>
-      <style>{keyframes}</style>
-      <div style={styles.overlay} onClick={onClose}>
-        <div style={styles.container} onClick={(e) => e.stopPropagation()}>
+      <div className="command-palette-overlay" onClick={onClose}>
+        <div className="command-palette-container" onClick={(e) => e.stopPropagation()}>
           {/* Search input */}
-          <div style={styles.searchWrapper}>
-            <div style={styles.searchIcon}>
+          <div className="command-palette-search-wrapper">
+            <div className="command-palette-search-icon">
               <AppIcon name="search" size={16} />
             </div>
             <input
               ref={inputRef}
               type="text"
-              style={styles.searchInput}
+              className="command-palette-search-input"
               placeholder="Type a command or search..."
               value={query}
               onChange={(e) => onQueryChange(e.target.value)}
@@ -280,35 +127,32 @@ export function CommandPalette({
           </div>
 
           {/* Results */}
-          <div ref={resultsRef} style={styles.results}>
+          <div ref={resultsRef} className="command-palette-results">
             {commands.length === 0 ? (
-              <div style={styles.empty}>No commands found</div>
+              <div className="command-palette-empty">No commands found</div>
             ) : (
               Object.entries(groupedCommands).map(([category, categoryCommands]) => (
                 <div key={category}>
-                  <div style={styles.category}>{category}</div>
+                  <div className="command-palette-category">{category}</div>
                   {categoryCommands.map((command) => {
                     const index = globalIndex++;
                     const isSelected = index === selectedIndex;
-                    
+
                     return (
                       <div
                         key={command.id}
                         data-index={index}
-                        style={{
-                          ...styles.commandItem,
-                          ...(isSelected ? styles.commandItemSelected : {}),
-                        }}
+                        className={`command-palette-item ${isSelected ? 'is-selected' : ''}`}
                         onClick={() => onExecute(command)}
                         onMouseEnter={() => onSelectIndex(index)}
                       >
                         {command.icon && (
-                          <div style={styles.commandIcon}>{command.icon}</div>
+                          <div className="command-palette-item-icon">{command.icon}</div>
                         )}
-                        <div style={styles.commandContent}>
-                          <div style={styles.commandLabel}>{command.label}</div>
+                        <div className="command-palette-item-content">
+                          <div className="command-palette-item-label">{command.label}</div>
                           {command.description && (
-                            <div style={styles.commandDescription}>
+                            <div className="command-palette-item-description">
                               {command.description}
                             </div>
                           )}
@@ -322,15 +166,15 @@ export function CommandPalette({
           </div>
 
           {/* Footer with hints */}
-          <div style={styles.footer}>
-            <div style={styles.footerHint}>
-              <span style={styles.footerKey}>↑↓</span> Navigate
+          <div className="command-palette-footer">
+            <div className="command-palette-footer-hint">
+              <span className="command-palette-footer-key">↑↓</span> Navigate
             </div>
-            <div style={styles.footerHint}>
-              <span style={styles.footerKey}>↵</span> Select
+            <div className="command-palette-footer-hint">
+              <span className="command-palette-footer-key">↵</span> Select
             </div>
-            <div style={styles.footerHint}>
-              <span style={styles.footerKey}>Esc</span> Close
+            <div className="command-palette-footer-hint">
+              <span className="command-palette-footer-key">Esc</span> Close
             </div>
           </div>
         </div>

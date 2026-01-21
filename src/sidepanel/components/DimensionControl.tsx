@@ -1,8 +1,13 @@
+// ============================================================================
+// Styles
+// ============================================================================
+
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { colors, spacing, sizes, radii } from '../tokens';
 import { Dropdown, DropdownOption } from '../primitives/Dropdown';
 import { NumberField } from '../primitives/NumberField';
 import { AppIcon } from '../primitives/AppIcon';
+import './components.css';
 
 interface DimensionControlProps {
     label: 'W' | 'H';
@@ -17,7 +22,6 @@ type DimensionMode = 'fixed' | 'fit' | 'fill';
 
 const AUTO_VALUE = 'auto';
 const NONE_VALUE = 'none';
-
 function parseMode(value: string): DimensionMode {
     if (value === 'fit-content') return 'fit';
     if (value === '100%') return 'fill';

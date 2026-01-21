@@ -13,7 +13,7 @@ import { Section } from '../primitives';
 import { AppIcon } from '../primitives/AppIcon';
 import type { AIProvider, AICredentials } from '../../ai/types';
 import { AI_STORAGE_KEYS } from '../../ai/types';
-import { colors } from '../tokens';
+
 
 // ============================================================================
 // Styles

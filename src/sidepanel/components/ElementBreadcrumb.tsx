@@ -5,10 +5,15 @@
  * Allows navigation via click and arrow buttons.
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import type { BreadcrumbItem } from '../../shared/types';
-import { colors, spacing, radii, transitions, typography } from '../tokens';
 import { AppIcon } from '../primitives';
+// ============================================================================
+// Styles
+// ============================================================================
+
+import './components.css';
+
 
 export interface ElementBreadcrumbProps {
   /** Breadcrumb path from body to current element */
@@ -25,86 +30,7 @@ export interface ElementBreadcrumbProps {
   canNavigateDown: boolean;
 }
 
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: spacing[2],
-    padding: `${spacing[2]} ${spacing[3]}`,
-    backgroundColor: colors.surface,
-    borderRadius: radii.md,
-    overflow: 'hidden',
-  },
-  pathContainer: {
-    flex: 1,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  path: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: spacing[1],
-    overflowX: 'auto',
-    scrollbarWidth: 'none',
-    msOverflowStyle: 'none',
-    paddingRight: spacing[2],
-  },
-  separator: {
-    color: colors.textMuted,
-    flexShrink: 0,
-    fontSize: 10,
-    opacity: 0.6,
-  },
-  item: {
-    background: 'none',
-    border: 'none',
-    color: colors.textMuted,
-    padding: `${spacing[1]} ${spacing[2]}`,
-    borderRadius: radii.sm,
-    cursor: 'pointer',
-    whiteSpace: 'nowrap',
-    fontSize: typography.xs,
-    fontFamily: 'inherit',
-    transition: `all ${transitions.fast}`,
-    flexShrink: 0,
-  },
-  itemHover: {
-    backgroundColor: colors.surfaceRaised,
-    color: colors.text,
-  },
-  itemCurrent: {
-    backgroundColor: colors.surfaceRaised,
-    color: colors.text,
-    fontWeight: 500,
-  },
-  navButtons: {
-    display: 'flex',
-    gap: 2,
-    flexShrink: 0,
-  },
-  navBtn: {
-    width: 24,
-    height: 24,
-    borderRadius: radii.sm,
-    border: 'none',
-    backgroundColor: 'transparent',
-    color: colors.textMuted,
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    transition: `all ${transitions.fast}`,
-    padding: 0,
-  },
-  navBtnHover: {
-    backgroundColor: colors.surfaceRaised,
-    color: colors.text,
-  },
-  navBtnDisabled: {
-    opacity: 0.4,
-    cursor: 'not-allowed',
-  },
-};
+
 
 export function ElementBreadcrumb({
   breadcrumb,
@@ -114,8 +40,6 @@ export function ElementBreadcrumb({
   canNavigateUp,
   canNavigateDown,
 }: ElementBreadcrumbProps): React.ReactElement {
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const [hoveredNav, setHoveredNav] = useState<'up' | 'down' | null>(null);
   const pathRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to show current element (last item)
@@ -133,32 +57,23 @@ export function ElementBreadcrumb({
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.pathContainer}>
+    <div className="breadcrumb-container">
+      <div className="breadcrumb-path-container">
         <div
           ref={pathRef}
-          style={styles.path}
-          // Hide scrollbar in webkit browsers
-          className="hide-scrollbar"
+          className="breadcrumb-path"
         >
           {breadcrumb.map((item, index) => {
             const isCurrent = index === breadcrumb.length - 1;
-            const isHovered = hoveredIndex === index && !isCurrent;
 
             return (
               <React.Fragment key={item.selector}>
-                {index > 0 && <span style={styles.separator}>›</span>}
+                {index > 0 && <span className="breadcrumb-separator">›</span>}
                 <button
                   type="button"
-                  style={{
-                    ...styles.item,
-                    ...(isCurrent ? styles.itemCurrent : {}),
-                    ...(isHovered ? styles.itemHover : {}),
-                  }}
+                  className={`breadcrumb-item ${isCurrent ? 'is-current' : ''}`}
                   onClick={() => onSelect(item.selector)}
                   onKeyDown={(e) => handleKeyDown(e, item.selector)}
-                  onMouseEnter={() => setHoveredIndex(index)}
-                  onMouseLeave={() => setHoveredIndex(null)}
                   title={item.selector}
                   aria-current={isCurrent ? 'page' : undefined}
                 >
@@ -170,18 +85,12 @@ export function ElementBreadcrumb({
         </div>
       </div>
 
-      <div style={styles.navButtons}>
+      <div className="breadcrumb-nav-buttons">
         <button
           type="button"
-          style={{
-            ...styles.navBtn,
-            ...(hoveredNav === 'up' && canNavigateUp ? styles.navBtnHover : {}),
-            ...(!canNavigateUp ? styles.navBtnDisabled : {}),
-          }}
+          className="breadcrumb-nav-btn"
           onClick={canNavigateUp ? onNavigateUp : undefined}
           disabled={!canNavigateUp}
-          onMouseEnter={() => setHoveredNav('up')}
-          onMouseLeave={() => setHoveredNav(null)}
           title="Select parent (Alt+↑)"
           aria-label="Navigate to parent element"
         >
@@ -189,28 +98,15 @@ export function ElementBreadcrumb({
         </button>
         <button
           type="button"
-          style={{
-            ...styles.navBtn,
-            ...(hoveredNav === 'down' && canNavigateDown ? styles.navBtnHover : {}),
-            ...(!canNavigateDown ? styles.navBtnDisabled : {}),
-          }}
+          className="breadcrumb-nav-btn"
           onClick={canNavigateDown ? onNavigateDown : undefined}
           disabled={!canNavigateDown}
-          onMouseEnter={() => setHoveredNav('down')}
-          onMouseLeave={() => setHoveredNav(null)}
           title="Select first child (Alt+↓)"
           aria-label="Navigate to first child element"
         >
           <AppIcon name="chevronDown" size={14} />
         </button>
       </div>
-
-      {/* Inline style for hiding scrollbar */}
-      <style>{`
-        .hide-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style>
     </div>
   );
 }
