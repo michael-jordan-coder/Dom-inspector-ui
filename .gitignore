@@ -1,9 +1,21 @@
 # Dependencies
 node_modules/
 
+# pnpm
+.pnpm-store/
+pnpm-lock.yaml
+.pnpm-debug.log
+
 # Build outputs
 dist/
+build/
 *.tsbuildinfo
+*.zip
+
+# Chrome Extension specific
+*.crx
+*.pem
+web-ext-artifacts/
 
 # IDE
 .vscode/
@@ -23,12 +35,22 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Testing
+coverage/
+.nyc_output/
+*.lcov
+
 # Environment
 .env
 .env.local
 .env.*.local
+.env.production
 
 # Temporary files
 *.tmp
 *.temp
 .cache/
+
+# Package manager lock files (optional - uncomment if you want to ignore other lock files)
+# package-lock.json
+# yarn.lock
