@@ -5,10 +5,16 @@
  * Clicking opens a ColorPopover for token selection and manual input.
  */
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { colors, radii, sizes } from '../tokens';
 import { parseColor, colorToHex } from '../features/color/colorUtils';
 import { ColorPopover } from './ColorPopover';
+
+// Animation class names
+const ANIM_COLOR_CHANGE = 'animate-color-change';
+
+/** Indicator state for showing property modification status */
+export type IndicatorState = 'modified' | 'recent' | 'inherited' | 'none';
 
 interface ColorFieldProps {
   /** Current color value (computed or raw) */
@@ -25,6 +31,10 @@ interface ColorFieldProps {
   tokens?: Array<{ name: string; value: string }>;
   /** Accessible label */
   ariaLabel?: string;
+  /** Indicator state for showing modification status */
+  indicator?: IndicatorState;
+  /** Tooltip text for inherited value */
+  inheritedTooltip?: string;
 }
 
 const styles = {
@@ -96,6 +106,30 @@ const styles = {
     cursor: 'not-allowed',
     pointerEvents: 'none' as const,
   } as React.CSSProperties,
+  indicator: {
+    position: 'absolute' as const,
+    left: 3,
+    top: '50%',
+    transform: 'translateY(-50%)',
+    width: 5,
+    height: 5,
+    borderRadius: '50%',
+    flexShrink: 0,
+    cursor: 'help',
+    zIndex: 2,
+  } as React.CSSProperties,
+  indicatorModified: {
+    backgroundColor: 'var(--indicator-modified)',
+  } as React.CSSProperties,
+  indicatorRecent: {
+    backgroundColor: 'var(--indicator-recent)',
+  } as React.CSSProperties,
+  indicatorInherited: {
+    backgroundColor: 'var(--indicator-inherited)',
+  } as React.CSSProperties,
+  containerRelative: {
+    position: 'relative' as const,
+  } as React.CSSProperties,
 };
 
 export function ColorField({
@@ -106,12 +140,34 @@ export function ColorField({
   icon,
   tokens = [],
   ariaLabel = 'Color',
+  indicator = 'none',
+  inheritedTooltip,
 }: ColorFieldProps): React.ReactElement {
   const [isOpen, setIsOpen] = useState(false);
+  const [animClass, setAnimClass] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const prevValueRef = useRef<string>(value);
 
   const parsed = parseColor(value, rawValue);
   const hex = colorToHex(value);
+
+  // Trigger animation when color changes
+  useEffect(() => {
+    if (prevValueRef.current !== value) {
+      setAnimClass(ANIM_COLOR_CHANGE);
+      prevValueRef.current = value;
+    }
+  }, [value]);
+
+  // Clear animation class after animation completes
+  useEffect(() => {
+    if (animClass) {
+      const timer = setTimeout(() => {
+        setAnimClass(null);
+      }, 150); // Match --duration-fast
+      return () => clearTimeout(timer);
+    }
+  }, [animClass]);
 
   const handleClick = useCallback(() => {
     if (!disabled) {
@@ -136,6 +192,7 @@ export function ColorField({
         style={{
           ...styles.container,
           ...(disabled ? styles.disabled : {}),
+          ...(indicator !== 'none' ? styles.containerRelative : {}),
         }}
         onClick={handleClick}
         role="button"
@@ -157,10 +214,28 @@ export function ColorField({
           e.currentTarget.style.backgroundColor = colors.surfaceColorField;
         }}
       >
-        {icon && <div style={styles.icon}>{icon}</div>}
+        {/* Indicator dot */}
+        {indicator !== 'none' && (
+          <div
+            style={{
+              ...styles.indicator,
+              ...(indicator === 'modified' ? styles.indicatorModified : {}),
+              ...(indicator === 'recent' ? styles.indicatorRecent : {}),
+              ...(indicator === 'inherited' ? styles.indicatorInherited : {}),
+            }}
+            title={
+              indicator === 'modified' 
+                ? 'Modified from default' 
+                : indicator === 'recent' 
+                  ? 'Recently changed' 
+                  : inheritedTooltip || 'Inherited value'
+            }
+          />
+        )}
+        {icon && <div style={{...styles.icon, ...(indicator !== 'none' ? { paddingLeft: 10 } : {})}}>{icon}</div>}
 
         {/* Color swatch with transparency support */}
-        <div style={styles.swatch}>
+        <div style={styles.swatch} className={animClass || undefined}>
           <div style={styles.swatchBg} />
           <div style={{ ...styles.swatchColor, backgroundColor: hex }} />
         </div>

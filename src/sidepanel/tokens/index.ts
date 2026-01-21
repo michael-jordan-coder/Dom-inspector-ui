@@ -66,6 +66,41 @@ export const transitions = {
 } as const;
 
 // =============================================================================
+// Animation Tokens
+// =============================================================================
+export const durations = {
+  instant: 'var(--duration-instant)',  // 50ms
+  fast: 'var(--duration-fast)',        // 150ms
+  normal: 'var(--duration-normal)',    // 250ms
+  slow: 'var(--duration-slow)',        // 400ms
+} as const;
+
+export const easings = {
+  default: 'var(--easing-default)',    // cubic-bezier(0.4, 0, 0.2, 1)
+  bounce: 'var(--easing-bounce)',      // cubic-bezier(0.34, 1.56, 0.64, 1)
+} as const;
+
+// =============================================================================
+// Feedback Colors
+// =============================================================================
+export const feedback = {
+  success: 'var(--feedback-success)',
+  successGlow: 'var(--feedback-success-glow)',
+  warning: 'var(--feedback-warning)',
+  error: 'var(--feedback-error)',
+  info: 'var(--feedback-info)',
+} as const;
+
+// =============================================================================
+// State Indicators
+// =============================================================================
+export const indicators = {
+  modified: 'var(--indicator-modified)',
+  inherited: 'var(--indicator-inherited)',
+  recent: 'var(--indicator-recent)',
+} as const;
+
+// =============================================================================
 // Shadows
 // =============================================================================
 export const shadows = {

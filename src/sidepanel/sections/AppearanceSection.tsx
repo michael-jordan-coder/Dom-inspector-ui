@@ -120,7 +120,9 @@ export function AppearanceSection({
 
   return (
     <Section
+      id="appearance"
       title="Appearance"
+      collapsible
       trailingIcons={
         <IconButton
           icon={<AppIcon name="eye" size={14} />}

@@ -14,6 +14,7 @@ export { NumberField } from './NumberField';
 export { Toggle } from './Toggle';
 export { ColorField } from './ColorField';
 export { ColorPopover } from './ColorPopover';
+export { PresetPopover } from './PresetPopover';
 export { AlignmentGrid } from './AlignmentGrid';
 export { Dropdown } from './Dropdown';
 export { AppIcon } from './AppIcon';

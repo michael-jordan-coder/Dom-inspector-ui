@@ -239,3 +239,17 @@ export async function clearSelection(): Promise<void> {
     throw e;
   }
 }
+
+/**
+ * Toggle spacing visualization overlay on the page.
+ */
+export async function toggleSpacingVisualization(enabled: boolean): Promise<void> {
+  try {
+    await sendMessage(
+      createMessage(MessageType.TOGGLE_SPACING_VISUALIZATION, { enabled })
+    );
+  } catch (e) {
+    callbacks.onError?.(String(e));
+    throw e;
+  }
+}

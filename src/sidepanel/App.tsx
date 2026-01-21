@@ -1,16 +1,18 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import type { ElementMetadata, ComputedStylesSnapshot, StylePatch } from '../shared/types';
 import {
   initBridge,
   startPicker,
   stopPicker,
   getCurrentState,
-  clearSelection,
   undo,
   redo,
+  applyStylePatch,
 } from './messaging/sidepanelBridge';
 import { InspectorHeader } from './components/InspectorHeader';
 import { InspectorSidebar } from './InspectorSidebar';
+import { CommandPalette } from './components/CommandPalette';
+import { useCommandPalette, createDefaultCommands } from './hooks/useCommandPalette';
 import { colors, spacing } from './tokens';
 
 // ============================================================================
@@ -203,12 +205,117 @@ export function App(): React.ReactElement {
     }
   }, []);
 
-  // Keyboard shortcuts for undo/redo
+  // Handle picker toggle
+  const handlePickerToggle = useCallback(async () => {
+    try {
+      if (isPickerActive) {
+        await stopPicker();
+        setIsPickerActive(false);
+      } else {
+        await startPicker();
+        setIsPickerActive(true);
+      }
+    } catch (e) {
+      showToast(String(e), true);
+    }
+  }, [isPickerActive, showToast]);
+
+  // Handle CSS copy
+  const handleCopyCSS = useCallback(async () => {
+    if (selectedElement && computedStyles) {
+      const css = generateCSSFromStyles(selectedElement.selector, computedStyles);
+      try {
+        await navigator.clipboard.writeText(css);
+        showToast('CSS copied!');
+      } catch {
+        showToast('Failed to copy', true);
+      }
+    }
+  }, [selectedElement, computedStyles, showToast]);
+
+  // Command palette commands
+  const commands = useMemo(() => {
+    return createDefaultCommands({
+      onTogglePicker: handlePickerToggle,
+      onCopyCSS: selectedElement ? handleCopyCSS : undefined,
+      onUndo: canUndo ? async () => { try { await undo(); } catch {} } : undefined,
+      onRedo: canRedo ? async () => { try { await redo(); } catch {} } : undefined,
+      onSetPadding: selectedElement ? async (value) => {
+        await applyStylePatch(selectedElement.selector, 'padding', `${value}px`, '');
+      } : undefined,
+      onSetMargin: selectedElement ? async (value) => {
+        await applyStylePatch(selectedElement.selector, 'margin', `${value}px`, '');
+      } : undefined,
+      onSetFontSize: selectedElement ? async (value) => {
+        await applyStylePatch(selectedElement.selector, 'fontSize', `${value}px`, '');
+      } : undefined,
+      onSetOpacity: selectedElement ? async (value) => {
+        await applyStylePatch(selectedElement.selector, 'opacity', String(value), '');
+      } : undefined,
+    });
+  }, [handlePickerToggle, handleCopyCSS, selectedElement, canUndo, canRedo]);
+
+  // Command palette hook
+  const commandPalette = useCommandPalette({
+    commands,
+    onCommandExecute: (cmd) => {
+      showToast(`Executed: ${cmd.label}`);
+    },
+  });
+
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
       const modKey = isMac ? e.metaKey : e.ctrlKey;
+      
+      // Skip if user is typing in an input field
+      const target = e.target as HTMLElement;
+      const isTyping = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
 
+      // P: Toggle picker mode (only when not typing)
+      if (e.key === 'p' && !modKey && !e.shiftKey && !e.altKey && !isTyping) {
+        e.preventDefault();
+        try {
+          if (isPickerActive) {
+            await stopPicker();
+            setIsPickerActive(false);
+          } else {
+            await startPicker();
+            setIsPickerActive(true);
+          }
+        } catch (err) {
+          console.error('Picker toggle failed:', err);
+        }
+        return;
+      }
+
+      // Cmd/Ctrl + K: Open command palette
+      if (modKey && e.key === 'k') {
+        e.preventDefault();
+        commandPalette.toggle();
+        return;
+      }
+
+      // Escape: Cancel picker mode or close command palette
+      if (e.key === 'Escape') {
+        if (commandPalette.isOpen) {
+          // Handled by command palette
+          return;
+        }
+        if (isPickerActive) {
+          e.preventDefault();
+          try {
+            await stopPicker();
+            setIsPickerActive(false);
+          } catch (err) {
+            console.error('Stop picker failed:', err);
+          }
+        }
+        return;
+      }
+
+      // Ctrl/Cmd + Z: Undo
       if (modKey && e.key === 'z') {
         e.preventDefault();
         if (e.shiftKey) {
@@ -231,7 +338,8 @@ export function App(): React.ReactElement {
           }
         }
       }
-      // Also support Ctrl/Cmd + Y for redo (Windows convention)
+      
+      // Ctrl/Cmd + Y: Redo (Windows convention)
       if (modKey && e.key === 'y') {
         e.preventDefault();
         if (canRedo) {
@@ -246,36 +354,7 @@ export function App(): React.ReactElement {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [canUndo, canRedo]);
-
-  // Handle picker toggle
-  const handlePickerToggle = useCallback(async () => {
-    try {
-      if (isPickerActive) {
-        await stopPicker();
-        setIsPickerActive(false);
-      } else {
-        await startPicker();
-        setIsPickerActive(true);
-      }
-    } catch (e) {
-      showToast(String(e), true);
-    }
-  }, [isPickerActive, showToast]);
-
-  // Handle done - clear selection and finish manipulation
-  const handleDone = useCallback(async () => {
-    try {
-      await clearSelection();
-      setSelectedElement(null);
-      setComputedStyles(null);
-      setCanUndo(false);
-      setCanRedo(false);
-      showToast('Done');
-    } catch (e) {
-      showToast(String(e), true);
-    }
-  }, [showToast]);
+  }, [canUndo, canRedo, isPickerActive, commandPalette]);
 
   return (
     <div style={styles.container}>
@@ -283,19 +362,7 @@ export function App(): React.ReactElement {
         isPickerActive={isPickerActive}
         onPickerToggle={handlePickerToggle}
         hasSelection={!!selectedElement}
-        hasChanges={canUndo}
-        onCopyCSS={async () => {
-          if (selectedElement && computedStyles) {
-            const css = generateCSSFromStyles(selectedElement.selector, computedStyles);
-            try {
-              await navigator.clipboard.writeText(css);
-              showToast('CSS copied!');
-            } catch {
-              showToast('Failed to copy', true);
-            }
-          }
-        }}
-        onReset={handleDone}
+        onCopyCSS={handleCopyCSS}
       />
 
       <div style={styles.content}>
@@ -341,6 +408,18 @@ export function App(): React.ReactElement {
           {toast.message}
         </div>
       )}
+
+      {/* Command Palette */}
+      <CommandPalette
+        isOpen={commandPalette.isOpen}
+        query={commandPalette.query}
+        onQueryChange={commandPalette.setQuery}
+        commands={commandPalette.filteredCommands}
+        selectedIndex={commandPalette.selectedIndex}
+        onSelectIndex={commandPalette.setSelectedIndex}
+        onExecute={commandPalette.executeCommand}
+        onClose={commandPalette.close}
+      />
 
       {/* Inject keyframes for animation */}
       <style>{`

@@ -6,7 +6,7 @@
 
 import React, { useCallback, useState } from 'react';
 import type { ComputedStylesSnapshot } from '../../shared/types';
-import { Section, Row, Segmented, NumberField, Toggle, AlignmentGrid, AppIcon } from '../primitives';
+import { Section, Row, Segmented, NumberField, Toggle, AlignmentGrid, AppIcon, IconButton } from '../primitives';
 import {
   justifyContentFeature,
   alignItemsFeature,
@@ -21,6 +21,7 @@ import {
 import { DimensionControl } from '../components/DimensionControl';
 import type { FeatureUISegmented, FeatureUINumber } from '../features/types';
 import { colors, spacing } from '../tokens';
+import { toggleSpacingVisualization } from '../messaging/sidepanelBridge';
 
 interface LayoutSectionProps {
   styles: ComputedStylesSnapshot;
@@ -39,6 +40,7 @@ export function LayoutSection({
   onPatchApply,
 }: LayoutSectionProps): React.ReactElement {
   const [borderBox, setBorderBox] = useState(true);
+  const [showSpacing, setShowSpacing] = useState(false);
 
   const isFlexOrGrid =
     styles.display === 'flex' ||
@@ -132,13 +134,38 @@ export function LayoutSection({
     [onPatchApply]
   );
 
+  const handleShowSpacingChange = useCallback(
+    async (value: boolean) => {
+      setShowSpacing(value);
+      try {
+        await toggleSpacingVisualization(value);
+      } catch (e) {
+        console.error('Failed to toggle spacing visualization:', e);
+      }
+    },
+    []
+  );
+
   const flowUI = flowFeature.ui as FeatureUISegmented<string>;
   const gapUI = gapFeature.ui as FeatureUINumber;
   const paddingHUI = paddingHFeature.ui as FeatureUINumber;
   const paddingVUI = paddingVFeature.ui as FeatureUINumber;
 
   return (
-    <Section title="Layout">
+    <Section 
+      id="layout" 
+      title="Layout" 
+      collapsible
+      trailingIcons={
+        <IconButton
+          icon={<AppIcon name={showSpacing ? 'eye' : 'eyeOff'} size={14} />}
+          title={showSpacing ? 'Hide spacing guides' : 'Show spacing guides'}
+          size="sm"
+          active={showSpacing}
+          onClick={() => handleShowSpacingChange(!showSpacing)}
+        />
+      }
+    >
       {/* Flow - full width segmented */}
       {isFlexOrGrid && (
         <div style={{ marginBottom: spacing[3] }}>

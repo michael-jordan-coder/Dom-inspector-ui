@@ -7,5 +7,6 @@
 export { AppearanceSection } from './AppearanceSection';
 export { LayoutSection } from './LayoutSection';
 export { TypographySection } from './TypographySection';
+export { EffectsSection } from './EffectsSection';
 export { HistorySection } from './HistorySection';
 

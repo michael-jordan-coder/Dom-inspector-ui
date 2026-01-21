@@ -1,7 +1,7 @@
 /**
  * Inspector Header
  * 
- * Top action bar with global controls: Pick Element, Copy CSS, Reset.
+ * Top action bar with global controls: Pick Element, Copy CSS.
  */
 
 import React, { useState } from 'react';
@@ -12,9 +12,7 @@ export interface InspectorHeaderProps {
   isPickerActive: boolean;
   onPickerToggle: () => void;
   hasSelection: boolean;
-  hasChanges: boolean;
   onCopyCSS: () => void;
-  onReset: () => void;
 }
 
 // Action button component for header
@@ -124,9 +122,7 @@ export function InspectorHeader({
   isPickerActive,
   onPickerToggle,
   hasSelection,
-  hasChanges,
   onCopyCSS,
-  onReset,
 }: InspectorHeaderProps): React.ReactElement {
   return (
     <header style={styles.header}>
@@ -138,16 +134,6 @@ export function InspectorHeader({
       </h1>
 
       <div style={styles.actions}>
-        {/* Reset - only visible when changes exist */}
-        {hasChanges && (
-          <ActionButton
-            icon={<AppIcon name="reset" />}
-            label="Reset"
-            onClick={onReset}
-            variant="danger"
-            title="Reset to original styles"
-          />
-        )}
 
         {/* Copy CSS - only visible when element selected */}
         {hasSelection && (
@@ -155,7 +141,7 @@ export function InspectorHeader({
             icon={<AppIcon name="copy" />}
             label="Copy"
             onClick={onCopyCSS}
-            variant="default"
+            variant="primary"
             title="Copy all styles as CSS"
           />
         )}

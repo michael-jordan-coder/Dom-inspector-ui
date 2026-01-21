@@ -66,7 +66,7 @@ export function TypographySection({
     }));
 
     return (
-        <Section title="Text">
+        <Section id="typography" title="Text" collapsible>
             {/* Font Size and Line Height */}
             <Row gap={spacing[3]}>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>

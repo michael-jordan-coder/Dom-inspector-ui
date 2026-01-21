@@ -112,6 +112,9 @@ export enum MessageType {
   GET_CURRENT_STATE = 'GET_CURRENT_STATE',
   CURRENT_STATE = 'CURRENT_STATE',
 
+  // Visualization
+  TOGGLE_SPACING_VISUALIZATION = 'TOGGLE_SPACING_VISUALIZATION',
+
   // Connection
   PING = 'PING',
   PONG = 'PONG',
@@ -218,6 +221,13 @@ export interface PongMessage extends BaseMessage {
   type: MessageType.PONG;
 }
 
+export interface ToggleSpacingVisualizationMessage extends BaseMessage {
+  type: MessageType.TOGGLE_SPACING_VISUALIZATION;
+  payload: {
+    enabled: boolean;
+  };
+}
+
 // Union type of all messages
 export type ExtensionMessage =
   | StartPickMessage
@@ -235,7 +245,8 @@ export type ExtensionMessage =
   | GetCurrentStateMessage
   | CurrentStateMessage
   | PingMessage
-  | PongMessage;
+  | PongMessage
+  | ToggleSpacingVisualizationMessage;
 
 // ============================================================================
 // Utility Functions

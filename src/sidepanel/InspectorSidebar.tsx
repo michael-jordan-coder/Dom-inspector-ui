@@ -9,7 +9,7 @@ import React, { useCallback, useMemo } from 'react';
 import type { ComputedStylesSnapshot, ElementMetadata } from '../shared/types';
 import { applyStylePatch } from './messaging/sidepanelBridge';
 import { Divider } from './primitives';
-import { AppearanceSection, LayoutSection, TypographySection, HistorySection } from './sections';
+import { AppearanceSection, LayoutSection, TypographySection, EffectsSection, HistorySection } from './sections';
 import { SelectedSummary } from './components/SelectedSummary';
 import { spacing } from './tokens';
 import { getDefaultColorTokens } from './features/color';
@@ -83,10 +83,12 @@ export function InspectorSidebar({
       />
 
       <Divider margin={spacing[1]} />
+      <EffectsSection
+        styles={styles}
+        onPatchApply={handlePatchApply}
+      />
 
-
-
-
+      <Divider margin={spacing[1]} />
 
       <HistorySection
         canUndo={canUndo}
