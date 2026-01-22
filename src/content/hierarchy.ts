@@ -62,8 +62,17 @@ function extractParentSummary(parent: Element | null): ElementSummary | null {
  * Limited to MAX_CHILDREN for performance.
  */
 function extractChildrenSummaries(element: Element): ElementSummary[] {
-  const children = Array.from(element.children);
-  return children.slice(0, MAX_CHILDREN).map(createElementSummary);
+  // Optimize: Avoid Array.from(element.children) which allocates O(N) memory
+  // Directly iterate only the needed children up to MAX_CHILDREN
+  const children = element.children;
+  const count = Math.min(children.length, MAX_CHILDREN);
+  const result: ElementSummary[] = [];
+
+  for (let i = 0; i < count; i++) {
+    result.push(createElementSummary(children[i]));
+  }
+
+  return result;
 }
 
 // ============================================================================
