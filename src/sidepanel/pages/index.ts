@@ -5,3 +5,4 @@
  */
 
 export { AIPage } from './AIPage';
+export { InspectorPage } from './InspectorPage';

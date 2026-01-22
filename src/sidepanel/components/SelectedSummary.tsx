@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import type { ElementMetadata, SelectorConfidence } from '../../shared/types';
 import { AppIcon } from '../primitives';
 import { computeSelectorConfidence } from '../../shared/selector';
@@ -32,6 +32,15 @@ export function SelectedSummary({
   // Compute selector confidence
   const confidence = useMemo((): SelectorConfidence => {
     return computeSelectorConfidence(element.selector, 1);
+  }, [element.selector]);
+
+  // Copy feedback state
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(element.selector);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }, [element.selector]);
 
   return (
@@ -73,7 +82,17 @@ export function SelectedSummary({
 
         {/* Selector */}
         <div className="selected-summary-selector-row">
-          <span className="selected-summary-selector-label">Selector</span>
+          <div className="selected-summary-selector-header">
+            <span className="selected-summary-selector-label">Selector</span>
+            <button
+              className="selected-summary-copy-button"
+              onClick={handleCopy}
+              aria-label="Copy selector"
+              title="Copy selector"
+            >
+              <AppIcon name={copied ? 'check' : 'copy'} size={12} />
+            </button>
+          </div>
           <div className="selected-summary-selector">{element.selector}</div>
         </div>
 

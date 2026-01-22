@@ -12,6 +12,7 @@ import { AppIcon } from '../primitives/AppIcon';
 import { colors, spacing, radii } from '../tokens';
 import { AISettings } from '../components/AISettings';
 import { AIConfirmation } from '../components/AIConfirmation';
+import { PromptBar } from '../primitives/PromptBar';
 import {
   aiStateMachine,
   useAIStateMachine,
@@ -292,6 +293,7 @@ export function AIPage({ hasChanges, patchCount, onSwitchToInspector }: AIPagePr
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [response, setResponse] = useState<AIResponse | null>(null);
+  const [promptValue, setPromptValue] = useState('');
 
   // Connect to global AI state machine
   const aiState = useAIStateMachine();
@@ -447,6 +449,23 @@ export function AIPage({ hasChanges, patchCount, onSwitchToInspector }: AIPagePr
     handleGenerate();
   }, [handleGenerate]);
 
+  const handlePromptSubmit = useCallback(() => {
+    if (!promptValue.trim()) return;
+    // TODO: Implement prompt submission logic
+    console.log('Submit prompt:', promptValue);
+    setPromptValue('');
+  }, [promptValue]);
+
+  const handlePickElement = useCallback(() => {
+    // Switch to inspector tab for element picking
+    onSwitchToInspector?.();
+  }, [onSwitchToInspector]);
+
+  const handleCreateSnippet = useCallback(() => {
+    // TODO: Implement code snippet creation
+    console.log('Create snippet');
+  }, []);
+
   const canGenerate = hasCredentials && hasChanges && !isLoading;
   const showSetup = !hasCredentials;
   const showGenerateUI = hasCredentials && !response && !isLoading;
@@ -601,6 +620,18 @@ export function AIPage({ hasChanges, patchCount, onSwitchToInspector }: AIPagePr
           50% { opacity: 0.5; }
         }
       `}</style>
+
+      {/* Prompt Bar - Always visible at bottom */}
+      <PromptBar
+        value={promptValue}
+        onChange={setPromptValue}
+        onSubmit={handlePromptSubmit}
+        placeholder="Ask about your changes..."
+        disabled={isLoading}
+        loading={isLoading}
+        onPickElement={handlePickElement}
+        onCreateSnippet={handleCreateSnippet}
+      />
     </div>
   );
 }

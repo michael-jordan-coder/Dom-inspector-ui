@@ -49,7 +49,7 @@ export default defineConfig({
   plugins: [react(), chromeExtensionPlugin()],
   build: {
     outDir: 'dist',
-    emptyDirFirst: true,
+    emptyOutDir: true,
     rollupOptions: {
       input: {
         sidepanel: resolve(__dirname, 'src/sidepanel/index.html'),

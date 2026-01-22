@@ -14,12 +14,11 @@ import {
   getExportData,
 } from './messaging/sidepanelBridge';
 import { InspectorHeader } from './components/InspectorHeader';
-import { InspectorSidebar } from './InspectorSidebar';
 import { CommandPalette } from './components/CommandPalette';
 import { useCommandPalette, createDefaultCommands } from './hooks/useCommandPalette';
 import { SegmentedTabs } from './primitives';
-import { AIPage } from './pages';
-import { colors, spacing, radii } from './tokens';
+import { AIPage, InspectorPage } from './pages';
+import { colors, spacing } from './tokens';
 
 // Page types for segment controller
 type PageType = 'inspector' | 'ai';
@@ -51,47 +50,6 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     width: '100%',
-  },
-  emptyState: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing[4],
-    padding: spacing[6],
-    textAlign: 'center',
-    color: colors.textMuted,
-    flex: 1,
-  },
-  emptyIcon: {
-    width: 56,
-    height: 56,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radii.lg,
-    backgroundColor: colors.surfaceRaised,
-    opacity: 0.8,
-  },
-  emptyTitle: {
-    fontSize: '16px',
-    fontWeight: 600,
-    color: colors.text,
-    margin: 0,
-  },
-  emptyDescription: {
-    fontSize: '13px',
-    color: colors.textMuted,
-    maxWidth: 240,
-    lineHeight: 1.5,
-    margin: 0,
-  },
-  emptyAction: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: spacing[2],
-    marginTop: spacing[2],
   },
   toast: {
     position: 'fixed',
@@ -293,8 +251,8 @@ export function App(): React.ReactElement {
     return createDefaultCommands({
       onTogglePicker: handlePickerToggle,
       onCopyCSS: selectedElement ? handleCopyCSS : undefined,
-      onUndo: canUndo ? async () => { try { await undo(); } catch {} } : undefined,
-      onRedo: canRedo ? async () => { try { await redo(); } catch {} } : undefined,
+      onUndo: canUndo ? async () => { try { await undo(); } catch { } } : undefined,
+      onRedo: canRedo ? async () => { try { await redo(); } catch { } } : undefined,
       onSetPadding: selectedElement ? async (value) => {
         await applyStylePatch(selectedElement.selector, 'padding', `${value}px`, '');
       } : undefined,
@@ -323,7 +281,7 @@ export function App(): React.ReactElement {
     const handleKeyDown = async (e: KeyboardEvent) => {
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
       const modKey = isMac ? e.metaKey : e.ctrlKey;
-      
+
       // Skip if user is typing in an input field
       const target = e.target as HTMLElement;
       const isTyping = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
@@ -393,7 +351,7 @@ export function App(): React.ReactElement {
           }
         }
       }
-      
+
       // Ctrl/Cmd + Y: Redo (Windows convention)
       if (modKey && e.key === 'y') {
         e.preventDefault();
@@ -485,43 +443,14 @@ export function App(): React.ReactElement {
       <div style={styles.content}>
         {/* Inspector Page */}
         {activePage === 'inspector' && (
-          <>
-            {selectedElement && computedStyles ? (
-              <InspectorSidebar
-                element={selectedElement}
-                styles={computedStyles}
-                canUndo={canUndo}
-                canRedo={canRedo}
-              />
-            ) : (
-              <div style={styles.emptyState}>
-                <div style={styles.emptyIcon}>
-                  <svg
-                    width={28}
-                    height={28}
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={1.5}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M15.042 21.672L13.684 16.6m0 0l-2.51 2.225.569-9.47 5.227 7.917-3.286-.672zM12 2.25V4.5m5.834.166l-1.591 1.591M20.25 10.5H18M7.757 14.743l-1.59 1.59M6 10.5H3.75m4.007-4.243l-1.59-1.59"
-                    />
-                  </svg>
-                </div>
-                <h3 style={styles.emptyTitle}>
-                  {isPickerActive ? 'Select an Element' : 'Pick Element'}
-                </h3>
-                <p style={styles.emptyDescription}>
-                  {isPickerActive
-                    ? 'Click on any element in the page to inspect and edit its styles.'
-                    : 'Click the "Pick Element" button to start selecting elements.'}
-                </p>
-              </div>
-            )}
-          </>
+          <InspectorPage
+            selectedElement={selectedElement}
+            computedStyles={computedStyles}
+            isPickerActive={isPickerActive}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            onPickerToggle={handlePickerToggle}
+          />
         )}
 
         {/* AI Page */}
