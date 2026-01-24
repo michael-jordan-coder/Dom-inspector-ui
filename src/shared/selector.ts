@@ -47,7 +47,9 @@ function getNthOfTypeIndex(element: Element): number {
   const tagName = element.tagName;
   let index = 1;
 
-  for (const sibling of Array.from(parent.children)) {
+  const children = parent.children;
+  for (let i = 0; i < children.length; i++) {
+    const sibling = children[i];
     if (sibling === element) break;
     if (sibling.tagName === tagName) index++;
   }
