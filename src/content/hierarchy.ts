@@ -62,8 +62,15 @@ function extractParentSummary(parent: Element | null): ElementSummary | null {
  * Limited to MAX_CHILDREN for performance.
  */
 function extractChildrenSummaries(element: Element): ElementSummary[] {
-  const children = Array.from(element.children);
-  return children.slice(0, MAX_CHILDREN).map(createElementSummary);
+  const summaries: ElementSummary[] = [];
+  const children = element.children;
+  const count = Math.min(children.length, MAX_CHILDREN);
+
+  for (let i = 0; i < count; i++) {
+    summaries.push(createElementSummary(children[i]));
+  }
+
+  return summaries;
 }
 
 // ============================================================================
@@ -104,7 +111,14 @@ function extractBreadcrumb(element: Element): BreadcrumbItem[] {
 function getSiblingIndex(element: Element): number {
   const parent = element.parentElement;
   if (!parent) return 0;
-  return Array.from(parent.children).indexOf(element);
+
+  const children = parent.children;
+  for (let i = 0; i < children.length; i++) {
+    if (children[i] === element) {
+      return i;
+    }
+  }
+  return 0;
 }
 
 /**
@@ -135,17 +149,22 @@ function createElementSummary(element: Element): ElementSummary {
  * Get a preview of direct text content (not from nested elements).
  */
 function getDirectTextPreview(element: Element): string | undefined {
-  const textNodes = Array.from(element.childNodes)
-    .filter((node): node is Text => 
-      node.nodeType === Node.TEXT_NODE && 
-      Boolean(node.textContent?.trim())
-    )
-    .map(node => node.textContent?.trim())
-    .filter((text): text is string => Boolean(text));
+  const textParts: string[] = [];
+  const nodes = element.childNodes;
+
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent?.trim();
+      if (text) {
+        textParts.push(text);
+      }
+    }
+  }
   
-  if (textNodes.length === 0) return undefined;
+  if (textParts.length === 0) return undefined;
   
-  const combined = textNodes.join(' ');
+  const combined = textParts.join(' ');
   if (combined.length <= TEXT_PREVIEW_LENGTH) {
     return combined;
   }

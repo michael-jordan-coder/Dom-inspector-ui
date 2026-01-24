@@ -1,5 +1,5 @@
 import { InputHTMLAttributes, forwardRef, useRef, useEffect } from 'react';
-import { MousePointerIcon, CodeIcon, ArrowUpIcon } from './AnimatedIcons';
+import { IconPointer, IconCode, IconArrowUp } from '@tabler/icons-react';
 
 interface PromptBarProps {
     value: string;
@@ -60,7 +60,7 @@ export function PromptBar({
                     onClick={onPickElement}
                     disabled={disabled}
                 >
-                    <MousePointerIcon />
+                    <IconPointer size={20} />
                 </button>
                 <div className="right-actions">
                     <button
@@ -70,7 +70,7 @@ export function PromptBar({
                         onClick={onCreateSnippet}
                         disabled={disabled}
                     >
-                        <CodeIcon />
+                        <IconCode size={20} />
                     </button>
                     <button
                         className="send-btn"
@@ -78,7 +78,7 @@ export function PromptBar({
                         disabled={disabled || loading || !value.trim()}
                         aria-label="Send"
                     >
-                        <ArrowUpIcon />
+                        <IconArrowUp size={16} />
                     </button>
                 </div>
             </div>

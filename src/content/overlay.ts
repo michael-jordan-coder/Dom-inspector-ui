@@ -366,9 +366,15 @@ export function isTextEditable(element: Element): boolean {
   if (nonEditableTags.includes(tagName)) return false;
   
   // Check if element has direct text content (not just from children)
-  const hasDirectText = Array.from(element.childNodes).some(
-    node => node.nodeType === Node.TEXT_NODE && node.textContent?.trim()
-  );
+  let hasDirectText = false;
+  const nodes = element.childNodes;
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim()) {
+      hasDirectText = true;
+      break;
+    }
+  }
   
   // Allow if it's a known editable tag or has direct text
   return editableTagNames.includes(tagName) || hasDirectText;
@@ -378,10 +384,15 @@ export function isTextEditable(element: Element): boolean {
  * Get the direct text content of an element (excluding nested elements' text).
  */
 function getDirectTextContent(element: Element): string {
-  return Array.from(element.childNodes)
-    .filter(node => node.nodeType === Node.TEXT_NODE)
-    .map(node => node.textContent || '')
-    .join('');
+  let text = '';
+  const nodes = element.childNodes;
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    if (node.nodeType === Node.TEXT_NODE) {
+      text += node.textContent || '';
+    }
+  }
+  return text;
 }
 
 /**
