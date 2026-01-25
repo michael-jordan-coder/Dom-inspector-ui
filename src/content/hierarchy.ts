@@ -62,8 +62,15 @@ function extractParentSummary(parent: Element | null): ElementSummary | null {
  * Limited to MAX_CHILDREN for performance.
  */
 function extractChildrenSummaries(element: Element): ElementSummary[] {
-  const children = Array.from(element.children);
-  return children.slice(0, MAX_CHILDREN).map(createElementSummary);
+  const summaries: ElementSummary[] = [];
+  const children = element.children;
+  const limit = Math.min(children.length, MAX_CHILDREN);
+
+  for (let i = 0; i < limit; i++) {
+    summaries.push(createElementSummary(children[i]));
+  }
+
+  return summaries;
 }
 
 // ============================================================================
@@ -104,7 +111,13 @@ function extractBreadcrumb(element: Element): BreadcrumbItem[] {
 function getSiblingIndex(element: Element): number {
   const parent = element.parentElement;
   if (!parent) return 0;
-  return Array.from(parent.children).indexOf(element);
+
+  const children = parent.children;
+  for (let i = 0; i < children.length; i++) {
+    if (children[i] === element) return i;
+  }
+
+  return -1;
 }
 
 /**
