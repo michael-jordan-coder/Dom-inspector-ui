@@ -1,0 +1,3 @@
+## 2024-05-22 - Optimize DOM traversal and collection to avoid Array allocations
+**Learning:** `Array.from()` on `HTMLCollection` or `NodeList` creates a shallow copy of the entire collection. In hot paths (e.g., `mousemove` handlers or recursive DOM traversals), this leads to O(N) memory allocation and O(N) iteration, even if we only need a subset of elements or a single index.
+**Action:** Prefer direct iteration using `for` loops or `while (node) { node = node.nextSibling }` (or `previousElementSibling`) to avoid intermediate array allocations. This turns O(N) space complexity into O(1) and often improves time complexity for partial traversals.
