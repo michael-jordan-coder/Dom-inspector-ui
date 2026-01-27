@@ -62,8 +62,18 @@ function extractParentSummary(parent: Element | null): ElementSummary | null {
  * Limited to MAX_CHILDREN for performance.
  */
 function extractChildrenSummaries(element: Element): ElementSummary[] {
-  const children = Array.from(element.children);
-  return children.slice(0, MAX_CHILDREN).map(createElementSummary);
+  const summaries: ElementSummary[] = [];
+  const children = element.children;
+  const limit = Math.min(children.length, MAX_CHILDREN);
+
+  for (let i = 0; i < limit; i++) {
+    const child = children[i];
+    if (child) {
+      summaries.push(createElementSummary(child));
+    }
+  }
+
+  return summaries;
 }
 
 // ============================================================================
@@ -102,9 +112,13 @@ function extractBreadcrumb(element: Element): BreadcrumbItem[] {
  * Get 0-based index of element among its siblings.
  */
 function getSiblingIndex(element: Element): number {
-  const parent = element.parentElement;
-  if (!parent) return 0;
-  return Array.from(parent.children).indexOf(element);
+  let index = 0;
+  let sibling = element.previousElementSibling;
+  while (sibling) {
+    index++;
+    sibling = sibling.previousElementSibling;
+  }
+  return index;
 }
 
 /**
@@ -135,21 +149,31 @@ function createElementSummary(element: Element): ElementSummary {
  * Get a preview of direct text content (not from nested elements).
  */
 function getDirectTextPreview(element: Element): string | undefined {
-  const textNodes = Array.from(element.childNodes)
-    .filter((node): node is Text => 
-      node.nodeType === Node.TEXT_NODE && 
-      Boolean(node.textContent?.trim())
-    )
-    .map(node => node.textContent?.trim())
-    .filter((text): text is string => Boolean(text));
-  
-  if (textNodes.length === 0) return undefined;
-  
-  const combined = textNodes.join(' ');
+  let combined = '';
+  const nodes = element.childNodes;
+  let hasText = false;
+
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent?.trim();
+      if (text) {
+        if (hasText) combined += ' ';
+        combined += text;
+        hasText = true;
+
+        // Early exit if we have enough text
+        if (combined.length > TEXT_PREVIEW_LENGTH + 5) break;
+      }
+    }
+  }
+
+  if (!hasText) return undefined;
+
   if (combined.length <= TEXT_PREVIEW_LENGTH) {
     return combined;
   }
-  
+
   return combined.slice(0, TEXT_PREVIEW_LENGTH) + '…';
 }
 
