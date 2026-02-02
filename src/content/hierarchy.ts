@@ -62,8 +62,16 @@ function extractParentSummary(parent: Element | null): ElementSummary | null {
  * Limited to MAX_CHILDREN for performance.
  */
 function extractChildrenSummaries(element: Element): ElementSummary[] {
-  const children = Array.from(element.children);
-  return children.slice(0, MAX_CHILDREN).map(createElementSummary);
+  const summaries: ElementSummary[] = [];
+  const children = element.children;
+  // Optimize: Iterate directly to avoid allocating array for all children
+  const limit = Math.min(children.length, MAX_CHILDREN);
+
+  for (let i = 0; i < limit; i++) {
+    summaries.push(createElementSummary(children[i]));
+  }
+
+  return summaries;
 }
 
 // ============================================================================
@@ -102,9 +110,16 @@ function extractBreadcrumb(element: Element): BreadcrumbItem[] {
  * Get 0-based index of element among its siblings.
  */
 function getSiblingIndex(element: Element): number {
-  const parent = element.parentElement;
-  if (!parent) return 0;
-  return Array.from(parent.children).indexOf(element);
+  // Optimize: Iterate backwards to avoid allocating array for all siblings
+  let index = 0;
+  let current = element.previousElementSibling;
+
+  while (current) {
+    index++;
+    current = current.previousElementSibling;
+  }
+
+  return index;
 }
 
 /**
@@ -135,22 +150,30 @@ function createElementSummary(element: Element): ElementSummary {
  * Get a preview of direct text content (not from nested elements).
  */
 function getDirectTextPreview(element: Element): string | undefined {
-  const textNodes = Array.from(element.childNodes)
-    .filter((node): node is Text => 
-      node.nodeType === Node.TEXT_NODE && 
-      Boolean(node.textContent?.trim())
-    )
-    .map(node => node.textContent?.trim())
-    .filter((text): text is string => Boolean(text));
+  // Optimize: Iterate manually to avoid array allocation and allow early exit
+  let combined = '';
+  const nodes = element.childNodes;
+  const len = nodes.length;
+  let hasText = false;
   
-  if (textNodes.length === 0) return undefined;
-  
-  const combined = textNodes.join(' ');
-  if (combined.length <= TEXT_PREVIEW_LENGTH) {
-    return combined;
+  for (let i = 0; i < len; i++) {
+    const node = nodes[i];
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent?.trim();
+      if (text) {
+        if (hasText) combined += ' ';
+        combined += text;
+        hasText = true;
+
+        // Early exit if we exceed length
+        if (combined.length > TEXT_PREVIEW_LENGTH) {
+          return combined.slice(0, TEXT_PREVIEW_LENGTH) + '…';
+        }
+      }
+    }
   }
   
-  return combined.slice(0, TEXT_PREVIEW_LENGTH) + '…';
+  return hasText ? combined : undefined;
 }
 
 // ============================================================================
