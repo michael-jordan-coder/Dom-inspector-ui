@@ -311,6 +311,7 @@ export enum MessageType {
   // Connection
   PING = 'PING',
   PONG = 'PONG',
+  CONTENT_SCRIPT_READY = 'CONTENT_SCRIPT_READY',
 
   // Prompt Handoff Export
   GET_EXPORT_DATA = 'GET_EXPORT_DATA',
@@ -418,6 +419,10 @@ export interface PongMessage extends BaseMessage {
   type: MessageType.PONG;
 }
 
+export interface ContentScriptReadyMessage extends BaseMessage {
+  type: MessageType.CONTENT_SCRIPT_READY;
+}
+
 export interface ToggleSpacingVisualizationMessage extends BaseMessage {
   type: MessageType.TOGGLE_SPACING_VISUALIZATION;
   payload: {
@@ -491,6 +496,7 @@ export type ExtensionMessage =
   | CurrentStateMessage
   | PingMessage
   | PongMessage
+  | ContentScriptReadyMessage
   | ToggleSpacingVisualizationMessage
   | TextContentChangedMessage
   | NavigateToParentMessage

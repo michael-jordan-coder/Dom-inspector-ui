@@ -247,32 +247,71 @@ async function ensureContentScriptInjected(tabId: number): Promise<void> {
   console.log('[UI Inspector] Injecting content script into tab', tabId);
   
   try {
-    // Inject the content script
-    await chrome.scripting.executeScript({
-      target: { tabId },
-      files: ['contentScript.js'],
+    // Set up a listener for the READY message from this specific tab
+    let isResolved = false;
+    let resolveReady: () => void;
+    const readyPromise = new Promise<void>((resolve) => {
+      resolveReady = () => {
+        isResolved = true;
+        resolve();
+      };
     });
-    
-    // Wait for script to initialize and verify it's loaded
-    // Try multiple times with increasing delays
-    let attempts = 0;
-    const maxAttempts = 5;
-    while (attempts < maxAttempts) {
-      const delay = 100 * (attempts + 1);
-      await new Promise(resolve => setTimeout(resolve, delay));
-      
-      try {
-        await chrome.tabs.sendMessage(tabId, createMessage(MessageType.PING));
-        console.log('[UI Inspector] Content script verified after', attempts + 1, 'attempts');
-        return; // Success!
-      } catch (pingError) {
-        // Continue to next attempt
+
+    const readyListener = (message: unknown, sender: chrome.runtime.MessageSender) => {
+      if (
+        !isResolved &&
+        isExtensionMessage(message) &&
+        message.type === MessageType.CONTENT_SCRIPT_READY &&
+        sender.tab?.id === tabId
+      ) {
+        resolveReady();
       }
+    };
+    chrome.runtime.onMessage.addListener(readyListener);
+
+    try {
+      // Inject the content script
+      await chrome.scripting.executeScript({
+        target: { tabId },
+        files: ['contentScript.js'],
+      });
       
-      attempts++;
+      // Wait for script to initialize - race between READY message and polling
+      await Promise.race([
+        readyPromise,
+        (async () => {
+          let attempts = 0;
+          const maxAttempts = 10;
+          while (attempts < maxAttempts && !isResolved) {
+            // Try immediately on first attempt, then use small increments
+            if (attempts > 0) {
+              const delay = attempts <= 3 ? 50 : 100;
+              await new Promise(resolve => setTimeout(resolve, delay));
+            }
+
+            if (isResolved) return;
+
+            try {
+              await chrome.tabs.sendMessage(tabId, createMessage(MessageType.PING));
+              console.log('[UI Inspector] Content script verified via ping after', attempts + 1, 'attempts');
+              isResolved = true;
+              return;
+            } catch (pingError) {
+              // Continue to next attempt
+            }
+            attempts++;
+          }
+          if (!isResolved) {
+            throw new Error('Content script injected but did not respond to ping');
+          }
+        })(),
+      ]);
+
+      console.log('[UI Inspector] Content script verified for tab', tabId);
+    } finally {
+      // Always cleanup listener
+      chrome.runtime.onMessage.removeListener(readyListener);
     }
-    
-    throw new Error('Content script injected but did not respond to ping');
   } catch (error) {
     console.error('[UI Inspector] Failed to inject content script:', error);
     const errorMessage = error instanceof Error ? error.message : String(error);

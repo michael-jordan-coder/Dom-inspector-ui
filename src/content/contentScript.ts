@@ -762,4 +762,7 @@ window.addEventListener('scroll', () => {
   }
 }, { passive: true });
 
+// Signal readiness to background script
+sendMessage(createMessage(MessageType.CONTENT_SCRIPT_READY));
+
 console.log('[UI Inspector] Content script loaded');
