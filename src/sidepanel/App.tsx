@@ -94,6 +94,9 @@ function generateCSSFromStyles(selector: string, styles: ComputedStylesSnapshot)
     add('align-items', styles.alignItems);
     add('gap', styles.gap);
   }
+  if (styles.overflow !== 'visible') {
+    add('overflow', styles.overflow);
+  }
   add('width', styles.width);
   add('height', styles.height);
   add('padding-top', styles.paddingTop);

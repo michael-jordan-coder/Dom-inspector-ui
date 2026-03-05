@@ -17,10 +17,8 @@ export const clipContentFeature: Feature<boolean> = {
 
   isApplicable: () => true,
 
-  // TODO: Need 'overflow' in ComputedStylesSnapshot
-  getState: (_styles: ComputedStylesSnapshot): boolean => {
-    // Stub: would check if overflow === 'hidden'
-    return false;
+  getState: (styles: ComputedStylesSnapshot): boolean => {
+    return styles.overflow === 'hidden';
   },
 
   createPatch: (value: boolean) => ({
