@@ -206,6 +206,7 @@ export function getComputedStylesSnapshot(element: Element): ComputedStylesSnaps
     justifyContent: computedStyle.justifyContent,
     alignItems: computedStyle.alignItems,
     gap: computedStyle.gap,
+    overflow: computedStyle.overflow,
     // Dimensions
     width: computedStyle.width,
     height: computedStyle.height,
