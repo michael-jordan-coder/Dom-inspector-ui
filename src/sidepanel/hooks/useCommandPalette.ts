@@ -93,10 +93,12 @@ export function useCommandPalette({
   const filteredCommands = useMemo(() => {
     if (!query) {
       // Show recent commands first, then all commands
+      const commandMap = new Map(commands.map(c => [c.id, c]));
       const recent = recentCommandIds
-        .map(id => commands.find(c => c.id === id))
+        .map(id => commandMap.get(id))
         .filter((c): c is Command => c !== undefined);
-      const others = commands.filter(c => !recentCommandIds.includes(c.id));
+      const recentSet = new Set(recentCommandIds);
+      const others = commands.filter(c => !recentSet.has(c.id));
       return [...recent, ...others];
     }
 
