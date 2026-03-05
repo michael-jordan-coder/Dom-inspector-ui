@@ -10,6 +10,32 @@
 import type { RepoContext, SourceLocation } from './types';
 
 // ============================================================================
+// Constants & Patterns
+// ============================================================================
+
+/** Common Tailwind-like utility patterns */
+const UTILITY_PATTERNS = [
+  /^(p|m|px|py|pt|pb|pl|pr|mx|my|mt|mb|ml|mr)-/,
+  /^(w|h|min-w|max-w|min-h|max-h)-/,
+  /^(flex|grid|block|inline|hidden)/,
+  /^(text|bg|border|rounded)-/,
+  /^(justify|items|content|self)-/,
+  /^(gap|space)-/,
+  /^(font|leading|tracking)-/,
+  /^(opacity|z)-/,
+];
+
+/** CSS Modules typically append a hash suffix */
+const CSS_MODULE_PATTERN = /_[a-zA-Z0-9]{5,}$/;
+
+/** BEM: block__element--modifier */
+const BEM_ELEMENT_PATTERN = /__/;
+const BEM_MODIFIER_PATTERN = /--/;
+
+/** Component name extraction pattern (e.g., "Button_root__abc123" -> "Button") */
+const COMPONENT_NAME_PATTERN = /^([A-Z][a-zA-Z]+)_/;
+
+// ============================================================================
 // Types
 // ============================================================================
 
@@ -411,7 +437,7 @@ function checkComponentStructure(
 
   // Extract component name from class (e.g., "Button_root__abc123" -> "Button")
   for (const className of classList) {
-    const match = className.match(/^([A-Z][a-zA-Z]+)_/);
+    const match = className.match(COMPONENT_NAME_PATTERN);
     if (match) {
       signals.push({
         type: 'component-name',
@@ -491,28 +517,15 @@ function searchByNaming(
 // ============================================================================
 
 function isUtilityClass(className: string): boolean {
-  // Common Tailwind patterns
-  const utilityPatterns = [
-    /^(p|m|px|py|pt|pb|pl|pr|mx|my|mt|mb|ml|mr)-/,
-    /^(w|h|min-w|max-w|min-h|max-h)-/,
-    /^(flex|grid|block|inline|hidden)/,
-    /^(text|bg|border|rounded)-/,
-    /^(justify|items|content|self)-/,
-    /^(gap|space)-/,
-    /^(font|leading|tracking)-/,
-    /^(opacity|z)-/,
-  ];
-  return utilityPatterns.some(p => p.test(className));
+  return UTILITY_PATTERNS.some(p => p.test(className));
 }
 
 function isCSSModuleClass(className: string): boolean {
-  // CSS Modules typically append a hash
-  return /_[a-zA-Z0-9]{5,}$/.test(className);
+  return CSS_MODULE_PATTERN.test(className);
 }
 
 function isBEMClass(className: string): boolean {
-  // BEM: block__element--modifier
-  return /__/.test(className) || /--/.test(className);
+  return BEM_ELEMENT_PATTERN.test(className) || BEM_MODIFIER_PATTERN.test(className);
 }
 
 function detectAmbiguityType(
