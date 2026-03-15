@@ -1,4 +1,4 @@
-import { motion, useReducedMotion, Variants, Transition, SVGMotionProps } from 'framer-motion';
+import { motion, useReducedMotion, Variants, Transition, SVGMotionProps } from './framerMotionShim';
 
 // Shared types for the icons - extensions SVGMotionProps to be compatible with motion.svg
 interface IconProps extends SVGMotionProps<SVGSVGElement> {

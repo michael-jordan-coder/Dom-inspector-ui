@@ -104,34 +104,78 @@ chrome.sidePanel
   .setPanelBehavior({ openPanelOnActionClick: true })
   .catch((error) => console.error('[UI Inspector] Failed to set panel behavior:', error));
 
+
+
+// ============================================================================
+// DevTools Panel Connections
+// ============================================================================
+
+const devtoolsPortsByTabId = new Map<number, chrome.runtime.Port[]>();
+
+chrome.runtime.onConnect.addListener((port) => {
+  if (!port.name.startsWith('devtools-panel:')) return;
+
+  const tabId = Number(port.name.split(':')[1]);
+  if (!Number.isFinite(tabId)) return;
+
+  const current = devtoolsPortsByTabId.get(tabId) ?? [];
+  devtoolsPortsByTabId.set(tabId, [...current, port]);
+
+  port.onDisconnect.addListener(() => {
+    const existing = devtoolsPortsByTabId.get(tabId) ?? [];
+    devtoolsPortsByTabId.set(
+      tabId,
+      existing.filter((p) => p !== port)
+    );
+  });
+});
+
+function forwardToDevtools(tabId: number, payload: unknown): void {
+  const ports = devtoolsPortsByTabId.get(tabId) ?? [];
+  ports.forEach((port) => {
+    try {
+      port.postMessage({ payload });
+    } catch {
+      // Ignore stale ports
+    }
+  });
+}
+
 // ============================================================================
 // Message Routing
 // ============================================================================
 
 // Forward messages from side panel to content script
-chrome.runtime.onMessage.addListener((message: ExtensionMessage, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message: ExtensionMessage | { type: string; payload?: unknown }, sender, sendResponse) => {
+  if ((message as { type?: string }).type === 'DEVTOOLS_TIMELINE_EVENT' && sender.tab?.id) {
+    forwardToDevtools(sender.tab.id, (message as { payload?: unknown }).payload);
+    return false;
+  }
+
   if (!isExtensionMessage(message)) {
     return false;
   }
 
+  const extensionMessage: ExtensionMessage = message;
+
   // Messages from side panel (no sender.tab means from extension pages)
   if (!sender.tab) {
     // Forward to active tab's content script
-    forwardToContentScript(message, sendResponse);
+    forwardToContentScript(extensionMessage, sendResponse);
     return true; // Async response
   }
 
   // Messages from content script - forward to side panel
   // For ELEMENT_SELECTED, capture screenshot first
-  if (message.type === MessageType.ELEMENT_SELECTED && sender.tab?.id) {
+  if (extensionMessage.type === MessageType.ELEMENT_SELECTED && sender.tab?.id) {
     const tabId = sender.tab.id;
-    const metadata = message.payload;
+    const metadata = extensionMessage.payload;
     
     // Capture screenshot asynchronously and forward with it
     captureElementScreenshot(tabId, metadata.boundingRect)
       .then((screenshot) => {
         const enrichedMessage = {
-          ...message,
+          ...extensionMessage,
           payload: {
             ...metadata,
             screenshot,
@@ -143,14 +187,14 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, sender, sendRes
       })
       .catch(() => {
         // If screenshot fails, forward original message
-        chrome.runtime.sendMessage(message).catch(() => {});
+        chrome.runtime.sendMessage(extensionMessage).catch(() => {});
       });
     
     return false;
   }
 
   // Other messages from content script - forward directly to side panel
-  chrome.runtime.sendMessage(message).catch(() => {
+  chrome.runtime.sendMessage(extensionMessage).catch(() => {
     // Side panel might not be open, ignore
   });
 

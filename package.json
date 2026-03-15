@@ -3,9 +3,11 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite build --watch",
+    "dev": "vite --config demo/vite.config.ts",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "dev:extension": "vite build --watch",
+    "build:extension": "tsc && vite build"
   },
   "dependencies": {
     "@tabler/icons-react": "^3.36.1",
