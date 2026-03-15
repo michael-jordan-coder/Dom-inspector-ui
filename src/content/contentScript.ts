@@ -51,6 +51,7 @@ import {
   getChildAtIndex,
   getSibling,
 } from './hierarchy';
+import { initDevtoolsBridge } from './devtoolsBridge';
 
 // ============================================================================
 // State
@@ -70,6 +71,8 @@ const state: ContentScriptState = {
   selectedSelector: null,
   hoveredElement: null,
 };
+
+initDevtoolsBridge();
 
 // ============================================================================
 // Element Metadata Extraction

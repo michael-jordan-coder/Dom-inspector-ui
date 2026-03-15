@@ -53,6 +53,8 @@ export default defineConfig({
     rollupOptions: {
       input: {
         sidepanel: resolve(__dirname, 'src/sidepanel/index.html'),
+        devtoolsPage: resolve(__dirname, 'src/devtools/devtoolsPage.html'),
+        devtoolsPanel: resolve(__dirname, 'src/devtools/panel.html'),
         serviceWorker: resolve(__dirname, 'src/background/serviceWorker.ts'),
       },
       output: {
