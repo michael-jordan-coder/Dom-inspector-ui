@@ -65,13 +65,16 @@ function isNumber(token: string): boolean {
   return !isNaN(parseFloat(token)) && isFinite(parseFloat(token));
 }
 
+const MAX_PARSE_DEPTH = 100;
+
 /**
  * Evaluate a simple math expression using recursive descent parser
  * Handles operator precedence: * / before + -
  */
 function evaluate(tokens: string[]): number {
   let pos = 0;
-  
+  let depth = 0;
+
   function parseExpression(): number {
     let left = parseTerm();
     
@@ -107,10 +110,12 @@ function evaluate(tokens: string[]): number {
   
   function parseFactor(): number {
     const token = tokens[pos];
-    
+
     if (token === '(') {
+      if (++depth > MAX_PARSE_DEPTH) throw new Error('Expression too deeply nested');
       pos++;
       const result = parseExpression();
+      depth--;
       if (tokens[pos] !== ')') throw new Error('Missing closing parenthesis');
       pos++;
       return result;
