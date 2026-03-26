@@ -72,6 +72,7 @@ export interface ComputedStylesSnapshot {
   justifyContent: string;
   alignItems: string;
   gap: string;
+  overflow: string;
   // Dimensions
   width: string;
   height: string;
