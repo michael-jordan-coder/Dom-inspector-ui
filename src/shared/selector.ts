@@ -46,8 +46,13 @@ function getNthOfTypeIndex(element: Element): number {
 
   const tagName = element.tagName;
   let index = 1;
+  // Optimize: Use direct iteration over HTMLCollection to avoid Array.from allocation
+  // This is a hot path for selector generation in deep DOM trees
+  const children = parent.children;
+  const len = children.length;
 
-  for (const sibling of Array.from(parent.children)) {
+  for (let i = 0; i < len; i++) {
+    const sibling = children[i];
     if (sibling === element) break;
     if (sibling.tagName === tagName) index++;
   }
