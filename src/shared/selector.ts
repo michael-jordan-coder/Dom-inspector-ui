@@ -39,17 +39,19 @@ function escapeCSS(str: string): string {
 
 /**
  * Get the nth-of-type index for an element among its siblings.
+ * Optimized: Uses previousElementSibling traversal (O(k)) instead of
+ * iterating over all children with Array.from (O(N) allocation + iteration).
  */
 function getNthOfTypeIndex(element: Element): number {
-  const parent = element.parentElement;
-  if (!parent) return 1;
-
   const tagName = element.tagName;
   let index = 1;
+  let sibling = element.previousElementSibling;
 
-  for (const sibling of Array.from(parent.children)) {
-    if (sibling === element) break;
-    if (sibling.tagName === tagName) index++;
+  while (sibling) {
+    if (sibling.tagName === tagName) {
+      index++;
+    }
+    sibling = sibling.previousElementSibling;
   }
 
   return index;
