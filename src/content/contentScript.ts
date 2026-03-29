@@ -755,6 +755,8 @@ document.addEventListener('visibilitychange', () => {
 let scrollRafId: number | null = null;
 
 window.addEventListener('scroll', () => {
+  if (!state.selectedElement) return;
+
   if (scrollRafId === null) {
     scrollRafId = requestAnimationFrame(() => {
       if (state.selectedElement && document.contains(state.selectedElement)) {
